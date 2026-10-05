@@ -1,0 +1,38 @@
+# --- CMake Build Folders ---
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# --- Compiler Outputs (Binaries) ---
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.s19
+*.mot
+
+# --- Intermediate Files ---
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# --- IDE / Editor Files (опционально, но полезно) ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS Metadata ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
