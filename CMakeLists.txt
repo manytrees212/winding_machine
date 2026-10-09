@@ -68,7 +68,29 @@ add_subdirectory(${EEPROM_PATH} ${CMAKE_CURRENT_BINARY_DIR}/eeprom)
 # 2. SOURCE & HEADER FILES
 # ============================================
 
+set(PROJECT_HEADERS
+    include/main.hpp
+    include/chip_init.hpp
+    include/sysclock_init.h
+    include/gpio.h
+    include/exti.h
+    include/uart_init.h
+    include/spi_init.h
+    include/tim.h
+    include/display_st7789.h
+    include/eeprom_data_init.hpp
+    include/flash_data_controller.hpp
+    include/project_config.hpp
+    include/button_controller.hpp
+    include/motor.hpp
+    include/encoder.hpp
+    include/pid.hpp
+    include/uart_cmd_parser.hpp
+    include/winding_machine.hpp
+)
+
 set(SOURCES
+    ${PROJECT_HEADERS}
     src/main.cpp
     src/cpp_support.cpp
     src/chip_init.cpp
@@ -166,7 +188,7 @@ target_compile_options(${PROJECT_NAME}.elf PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-unwind-tables>
-    -O0
+    -Og
     -Wshadow
     -Wdouble-promotion
     -g
