@@ -155,7 +155,6 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE
-    #HAL_DRIVER
     logger
     error_handler
     stm32_st7789 #spi tft_display
@@ -258,11 +257,6 @@ else()
     )
 endif()
 
-# Make ST-Link flashing available as a runnable target
-# set_target_properties(flash PROPERTIES
-#    FOLDER "qtc_runnable"
-#)
-
 # Flash target via bootloader
 find_program(STM32FLASH stm32flash)
 if(NOT STM32FLASH)
@@ -318,11 +312,6 @@ else()
         COMMENT "Interactive UART terminal on ${SERIAL_PORT} (Ctrl+C to exit)..."
     )
 endif()
-
-# Make UART bootloader flashing available as a runnable target
-# set_target_properties(flash_uart PROPERTIES
-#   FOLDER "qtc_runnable"
-#)
 
 # ============================================
 # DIAGNOSTICS
