@@ -4,13 +4,14 @@ ENTRY(Reset_Handler)
 /* Memory definitions */
 MEMORY
 {
-    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 62K /* 2K for EEPROM */
+    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 62K
     RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 20K
+    EEPROM (r) : ORIGIN = 0x0800F800, LENGTH = 2K
 }
 
 /* Stack and heap sizes */
 _estack = ORIGIN(RAM) + LENGTH(RAM);
-_Min_Heap_Size = 0x200;
+_Min_Heap_Size = 0x0;
 _Min_Stack_Size = 0x400;
 
 SECTIONS
@@ -73,6 +74,14 @@ SECTIONS
         _ebss = .;
         __bss_end__ = _ebss;
     } > RAM
+
+    /* 2K the end of eeprom for flash */
+    .eeprom_reserved (NOLOAD):
+  {
+    . = ALIGN(4);
+    _eeprom_start = .;
+    . = . + 2K;
+  } > FLASH
 
     /* Heap and stack */
     ._user_heap_stack :
