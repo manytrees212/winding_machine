@@ -430,12 +430,15 @@ void WindingMachine::ProcessButtonTwo(){
 void WindingMachine::FeederFree_SpeedDown(){
 
     auto current_speed = motor_driver_->GetSpeed();
-    auto min_speed = motor_driver_->GetMinSpeed();
+    if(current_speed==0){
+        return;
+    }
 
-    if(current_speed > (min_speed+MOTOR_SPEED_STEP)){
+    auto min_speed = motor_driver_->GetMinSpeed();
+    if(current_speed > min_speed){
         current_speed-=MOTOR_SPEED_STEP;
         motor_driver_->SetSpeed(current_speed);
-        display_speed_=(current_speed-min_speed)/MOTOR_SPEED_STEP;
+        display_speed_=current_speed;
     }else{
         motor_driver_->SetSpeed(0);
         display_speed_=0;
@@ -466,17 +469,24 @@ void WindingMachine::ProcessButtonThree(){
 void WindingMachine::FeederFree_SpeedUp(){
 
     auto current_speed = motor_driver_->GetSpeed();
-    auto max_speed = motor_driver_->GetMaxSpeed();
-    auto min_speed = motor_driver_->GetMinSpeed();
 
+    auto min_speed = motor_driver_->GetMinSpeed();
     if(current_speed==0){
         current_speed=min_speed;
+        motor_driver_->SetSpeed(current_speed);
+        display_speed_=current_speed;
+        return;
     }
+
+    auto max_speed = motor_driver_->GetMaxSpeed();
     if(current_speed < max_speed){
         current_speed+=MOTOR_SPEED_STEP;
-        motor_driver_->SetSpeed(current_speed);
-        display_speed_=(current_speed-min_speed)/MOTOR_SPEED_STEP;
+    }else{
+        current_speed=max_speed;
     }
+
+    motor_driver_->SetSpeed(current_speed);
+    display_speed_=current_speed;
 }
 
 /*=============*/

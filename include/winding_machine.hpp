@@ -91,7 +91,7 @@ private:
     //void FeederSlave_SpeedDown();
 #endif
 private:
-    static constexpr std::uint8_t MOTOR_SPEED_STEP{21};
+    static constexpr std::uint8_t MOTOR_SPEED_STEP{10};
     static constexpr std::uint8_t FEEDER_POS_UPDATE_INTERVAL_MS{10};
 private:
     ST7789_display* const display_;

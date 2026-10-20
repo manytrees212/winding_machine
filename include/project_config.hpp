@@ -25,8 +25,8 @@ struct UartCommand{
 };
 
 struct MotorConfig {
-    static constexpr std::uint8_t MAX_SPEED = 253;
-    static constexpr std::uint8_t MIN_SPEED = 127;
+    static constexpr std::uint8_t MAX_SPEED = 250;
+    static constexpr std::uint8_t MIN_SPEED = 70;
 };
 
 /*for motor driver BTS7960*/
