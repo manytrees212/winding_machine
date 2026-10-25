@@ -8,8 +8,8 @@
 
 WindingMachine::WindingMachine(ST7789_display* display,
                                FlashDataController* flash_ctrl,
-                               MotorDriver<BTS7960Config>* motor_driver,
-                               MotorDriver<DRV8871Config>* feeder_driver,
+                               MotorDriver<BTS7960ConfigMotor>* motor_driver,
+                               MotorDriver<BTS7960ConfigFeeder>* feeder_driver,
                                EncoderController* encoder_ctrl,
                                PID* pid,
                                ButtonController* button_ctrl)
@@ -469,7 +469,6 @@ void WindingMachine::ProcessButtonThree(){
 void WindingMachine::FeederFree_SpeedUp(){
 
     auto current_speed = motor_driver_->GetSpeed();
-
     auto min_speed = motor_driver_->GetMinSpeed();
     if(current_speed==0){
         current_speed=min_speed;
@@ -582,8 +581,8 @@ void WindingMachine::UpdateMotorFlashData(){
     display_turns_=current_turns;
     flash_data_ctrl_->SetFlashCurrentTurns(current_turns);
 
-    if(motor_log_cnt_==10){
-        LOG_INFO("turns=%d, turns_pos=%d", encoder_ctrl_->GetTurnNumberScaled(), GetTurnPosition());
+    if(motor_log_cnt_==20){
+        LOG_INFO("turns_pos=%d", GetTurnPosition());
         motor_log_cnt_=0;
     }
     ++motor_log_cnt_;
@@ -603,8 +602,8 @@ void WindingMachine::UpdateFeederFlashData(){
     auto feeder_pos = CalcFeederPosition(current_feeder_counts);
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/encoder_ctrl_->GetScaleFactorTurns());
 
-    if(feeder_log_cnt_==10){
-        LOG_INFO("fcnt=%d, pos=%d", current_feeder_counts, feeder_pos);
+    if(feeder_log_cnt_==20){
+        LOG_INFO("pos=%d", feeder_pos);
         feeder_log_cnt_=0;
     }
     ++feeder_log_cnt_;

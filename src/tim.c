@@ -22,7 +22,7 @@ void HAL_TIMEx_CommutCallback(TIM_HandleTypeDef *htim) {
     (void)htim;
 }
 
-/*for driver DRV8871 (feeder)*/
+/* feeder driver BTS7960 */
 void TIM1_Init(){
 
     __HAL_RCC_TIM1_CLK_ENABLE(); //72 MHz (APB2)
@@ -146,7 +146,7 @@ void TIM3_Init(){
     LOG_INFO("TIM3 CH1 and CH2 in Encoder mode READY");
 }
 
-/*for driver BTS7960 (motor)*/
+/* motor driver BTS7960*/
 void TIM4_Init(){
     __HAL_RCC_TIM4_CLK_ENABLE();
 

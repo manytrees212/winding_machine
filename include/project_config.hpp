@@ -30,7 +30,7 @@ struct MotorConfig {
 };
 
 /*for motor driver BTS7960*/
-struct BTS7960Config : public MotorConfig {
+struct BTS7960ConfigMotor : public MotorConfig {
     // Using TIM4
     static constexpr TIM_HandleTypeDef* TIMER = &htim4;
     static constexpr std::uint32_t TIMER_CHANNEL_FWD = TIM_CHANNEL_1;
@@ -39,19 +39,36 @@ struct BTS7960Config : public MotorConfig {
     static constexpr std::uint16_t TIMER_PERIOD = 2047;
     // PWM pins
     inline static GPIO_TypeDef* PWM_PORT = GPIOB;
-    static constexpr std::uint16_t R_PWM_PIN = RPWM_PIN;
-    static constexpr std::uint16_t L_PWM_PIN = LPWM_PIN;
+    static constexpr std::uint16_t R_PWM_PIN = RPWM_MOTOR_PIN;
+    static constexpr std::uint16_t L_PWM_PIN = LPWM_MOTOR_PIN;
     // Enable pins
-    inline static GPIO_TypeDef* ENABLE_PORT = GPIOB;
-    static constexpr std::uint16_t L_PIN = L_EN_PIN;
-    static constexpr std::uint16_t R_PIN = R_EN_PIN;
-    // Current sense pins (ADC)
-    inline static GPIO_TypeDef* CURRENT_PORT = GPIOB;
-    static constexpr std::uint16_t L_CURRENT_PIN = L_IS_PIN;
-    static constexpr std::uint16_t R_CURRENT_PIN = R_IS_PIN;
+    inline static GPIO_TypeDef* ENABLE_PORT_L = GPIOB;
+    inline static GPIO_TypeDef* ENABLE_PORT_R = GPIOB;
+    static constexpr std::uint16_t L_PIN = L_EN_MOTOR_PIN;
+    static constexpr std::uint16_t R_PIN = R_EN_MOTOR_PIN;
 };
 
-/*for motor driver DRV8871*/
+/*for feeder driver BTS7960*/
+struct BTS7960ConfigFeeder : public MotorConfig {
+    // Using TIM1
+    static constexpr TIM_HandleTypeDef* TIMER = &htim1;
+    static constexpr std::uint32_t TIMER_CHANNEL_FWD = TIM_CHANNEL_1;
+    static constexpr std::uint32_t TIMER_CHANNEL_REV = TIM_CHANNEL_2;
+    static constexpr bool IS_COMPLEMENTARY = true;
+    static constexpr std::uint16_t TIMER_PERIOD = 4095;
+    // PWM pins
+    inline static GPIO_TypeDef* PWM_PORT = GPIOB;
+    static constexpr std::uint16_t R_PWM_PIN = RPWM_FEEDER_PIN;
+    static constexpr std::uint16_t L_PWM_PIN = LPWM_FEEDER_PIN;
+    // Enable pins
+    inline static GPIO_TypeDef* ENABLE_PORT_L = GPIOA;
+    inline static GPIO_TypeDef* ENABLE_PORT_R = GPIOB;
+    static constexpr std::uint16_t L_PIN = L_EN_FEEDER_PIN;
+    static constexpr std::uint16_t R_PIN = R_EN_FEEDER_PIN;
+};
+
+#if 0
+/*for feeder driver DRV8871*/
 struct DRV8871Config : public MotorConfig{
     //Using TIM1
     static constexpr TIM_HandleTypeDef* TIMER = &htim1;
@@ -64,4 +81,6 @@ struct DRV8871Config : public MotorConfig{
     static constexpr std::uint16_t R_PWM_PIN = IN1_PIN;
     static constexpr std::uint16_t L_PWM_PIN = IN2_PIN;
 };
+#endif
+
 #endif //PROJECT_CONFIG_HPP

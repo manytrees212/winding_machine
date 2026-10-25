@@ -57,15 +57,6 @@ void GPIO_Init(void){
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    //BLK (PA4) backlight connected to 3V3
-#if 0
-    GPIO_InitStruct.Pin = BLK_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-#endif
-
     //SPI1 SCK(PA5), MOSI(PA7)
     GPIO_InitStruct.Pin = GPIO_PIN_5 | GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -98,33 +89,41 @@ void GPIO_Init(void){
     /*================================*/
     /*      Motor driver BTS7960      */
     /*================================*/
-    //activating pins L_EN(PB10) and R_EN(PB11)
-    GPIO_InitStruct.Pin = L_EN_PIN | R_EN_PIN;
+    //activating pins: L_EN(PB10) R_EN(PB11)
+    GPIO_InitStruct.Pin = L_EN_MOTOR_PIN | R_EN_MOTOR_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOB, L_EN_PIN | R_EN_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, L_EN_MOTOR_PIN | R_EN_MOTOR_PIN, GPIO_PIN_RESET);
 
-    //rotor PWM: LPWM(PB6) RPWM(PB7)
-    GPIO_InitStruct.Pin = LPWM_PIN | RPWM_PIN;
+    //PWM: LPWM(PB6) RPWM(PB7)
+    GPIO_InitStruct.Pin = LPWM_MOTOR_PIN | RPWM_MOTOR_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    //current pins L_IS(PB0) and R_IS(PB1): ADC
-    GPIO_InitStruct.Pin = L_IS_PIN | R_IS_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    /*================================*/
+    /*       Feeder driver BTS7960    */
+    /*================================*/
+    //activating pins: L_EN(PA8) R_EN(PB15)
+    GPIO_InitStruct.Pin = L_EN_FEEDER_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(GPIOA, L_EN_FEEDER_PIN, GPIO_PIN_RESET);
+
+    GPIO_InitStruct.Pin = R_EN_FEEDER_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(GPIOB, R_EN_FEEDER_PIN, GPIO_PIN_RESET);
 
-    /*================================*/
-    /*         Feeder driver          */
-    /*================================*/
-    //feeder PWM: IN1(PB13) and IN2(PB14)
-    GPIO_InitStruct.Pin = IN1_PIN | IN2_PIN;
+    //PWM: LPWM(PB13) RPWM(PB14)
+    GPIO_InitStruct.Pin = LPWM_FEEDER_PIN | RPWM_FEEDER_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;

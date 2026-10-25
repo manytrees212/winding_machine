@@ -14,7 +14,7 @@ template <typename T, typename = void>
 struct has_enable_pins : std::false_type {};
 
 template <typename T>
-struct has_enable_pins<T, std::void_t<decltype(T::ENABLE_PORT)>> : std::true_type {};
+struct has_enable_pins<T, std::void_t<decltype(T::ENABLE_PORT_L)>> : std::true_type {};
 
 template <typename Config>
 class MotorDriver{
@@ -74,8 +74,8 @@ private:
     void EnableMotor(bool enable) {
         if constexpr (HasEnablePins()) {
             GPIO_PinState state = enable ? GPIO_PIN_SET : GPIO_PIN_RESET;
-            HAL_GPIO_WritePin(Config::ENABLE_PORT, Config::L_PIN, state);
-            HAL_GPIO_WritePin(Config::ENABLE_PORT, Config::R_PIN, state);
+            HAL_GPIO_WritePin(Config::ENABLE_PORT_L, Config::L_PIN, state);
+            HAL_GPIO_WritePin(Config::ENABLE_PORT_R, Config::R_PIN, state);
         }
     }
 

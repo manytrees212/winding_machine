@@ -19,8 +19,8 @@ public:
     WindingMachine()=delete;
     WindingMachine(ST7789_display* display,
                    FlashDataController* flash_ctrl,
-                   MotorDriver<BTS7960Config>* motor_driver,
-                   MotorDriver<DRV8871Config>* feeder_driver,
+                   MotorDriver<BTS7960ConfigMotor>* motor_driver,
+                   MotorDriver<BTS7960ConfigFeeder>* feeder_driver,
                    EncoderController* encoder_ctrl,
                    PID* pid,
                    ButtonController* button_ctrl);
@@ -96,8 +96,8 @@ private:
 private:
     ST7789_display* const display_;
     FlashDataController* const flash_data_ctrl_;
-    MotorDriver<BTS7960Config>* const motor_driver_;
-    MotorDriver<DRV8871Config>* const feeder_driver_;
+    MotorDriver<BTS7960ConfigMotor>* const motor_driver_;
+    MotorDriver<BTS7960ConfigFeeder>* const feeder_driver_;
     EncoderController* const encoder_ctrl_;
     PID* const pid_ctrl_;
     ButtonController* const button_ctrl_;
