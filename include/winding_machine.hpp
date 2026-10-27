@@ -81,15 +81,12 @@ private:
 
     void SynchronizeTheFeeder();
 
-    void FeederFree_StartStop();
-    void FeederFree_SpeedUp();
-    void FeederFree_SpeedDown();
+    void StartStop();
+    void StartStopFeederSync();
 
-    void FeederSlave_StartStop();
-#if 0
-    //void FeederSlave_SpeedUp();
-    //void FeederSlave_SpeedDown();
-#endif
+    void SpeedUp();
+    void SpeedDown();
+
 private:
     static constexpr std::uint8_t MOTOR_SPEED_STEP{10};
     static constexpr std::uint8_t FEEDER_POS_UPDATE_INTERVAL_MS{10};

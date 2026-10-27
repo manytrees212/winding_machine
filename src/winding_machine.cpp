@@ -341,10 +341,10 @@ void WindingMachine::ProcessButtonOne(){
     switch(func_button_){
         case Function::Off:
             if(sync_button_==Sync::Off){
-                FeederFree_StartStop();
+                StartStop();
             }
             else if(true_feeder_pos_flag_){
-                FeederSlave_StartStop();
+                StartStopFeederSync();
                 DisplayFeederState();
                 DisplayFeederPosition();
                 DisplayFeederDirection();
@@ -377,7 +377,7 @@ void WindingMachine::ProcessButtonOne(){
         feeder_log_cnt_=10;
 }
 
-void WindingMachine::FeederFree_StartStop(){
+void WindingMachine::StartStop(){
     if(motor_driver_->GetState()==MotorState::Idle){
         motor_driver_->Start();
     }else{
@@ -385,7 +385,7 @@ void WindingMachine::FeederFree_StartStop(){
     }
 }
 
-void WindingMachine::FeederSlave_StartStop(){
+void WindingMachine::StartStopFeederSync(){
     if(motor_driver_->GetState()==MotorState::Idle){
         motor_driver_->SetDirection(Direction::Forward);
         if(!sync_flag_){
@@ -398,7 +398,6 @@ void WindingMachine::FeederSlave_StartStop(){
     }else{
         StopMachine();
         last_feeder_pos_correction_time_=0;
-        LED_Off();
     }
 }
 
@@ -410,10 +409,8 @@ void WindingMachine::ProcessButtonTwo(){
     switch(func_button_){
 
         case Function::Off:{
-            if(sync_button_==Sync::Off){
-                FeederFree_SpeedDown();
-                DisplayCurrentSpeed();
-            }
+            SpeedDown();
+            DisplayCurrentSpeed();
             return;
         }
         case Function::On:{
@@ -427,7 +424,7 @@ void WindingMachine::ProcessButtonTwo(){
     }
 }
 
-void WindingMachine::FeederFree_SpeedDown(){
+void WindingMachine::SpeedDown(){
 
     auto current_speed = motor_driver_->GetSpeed();
     if(current_speed==0){
@@ -452,10 +449,8 @@ void WindingMachine::ProcessButtonThree(){
 
     switch(func_button_){
         case Function::Off:{
-            if(sync_button_==Sync::Off){
-                FeederFree_SpeedUp();
-                DisplayCurrentSpeed();
-            }
+            SpeedUp();
+            DisplayCurrentSpeed();
             return;
         }
         case Function::On:{
@@ -466,7 +461,7 @@ void WindingMachine::ProcessButtonThree(){
     }
 }
 
-void WindingMachine::FeederFree_SpeedUp(){
+void WindingMachine::SpeedUp(){
 
     auto current_speed = motor_driver_->GetSpeed();
     auto min_speed = motor_driver_->GetMinSpeed();
@@ -505,6 +500,7 @@ void WindingMachine::ProcessButtonFour(){
                 UpdateFeederFlashData();
                 DisplayFeederPosition();
                 DisplayFeederDirection();
+                LED_On();
             }else{
                 sync_flag_=false;
                 LED_Off();
@@ -594,7 +590,6 @@ void WindingMachine::UpdateFeederFlashData(){
     if(!encoder_ctrl_->FeederEncoderHasUpdated()){
         return;
     }
-    LED_Off();
     auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
     auto flash_data = (current_feeder_counts<0) ? 0 : current_feeder_counts;
     flash_data_ctrl_->SetFlashFeederCounts(static_cast<uint16_t>(flash_data));
