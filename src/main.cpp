@@ -171,7 +171,6 @@ int main(){
 
         if(is_feeder){
             winding_machine.UpdateFeederFlashData();
-            LED_On();
         }
 
         if(is_motor && is_feeder){
