@@ -19,7 +19,6 @@ void GPIO_Init(void){
 
     // Remap Timer3 CH1 and CH2 for encoder
     __HAL_AFIO_REMAP_TIM3_PARTIAL();
-
     /*==============================*/
     /*          LED in-build        */
     /*==============================*/
@@ -77,8 +76,7 @@ void GPIO_Init(void){
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    HAL_GPIO_WritePin(GPIOA, ROW1_PIN | ROW2_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, ROW2_PIN, GPIO_PIN_SET);
 
     GPIO_InitStruct.Pin = COL1_PIN | COL2_PIN | COL3_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -107,27 +105,20 @@ void GPIO_Init(void){
     /*================================*/
     /*       Feeder driver BTS7960    */
     /*================================*/
-    //activating pins: L_EN(PA8) R_EN(PB15)
-    GPIO_InitStruct.Pin = L_EN_FEEDER_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOA, L_EN_FEEDER_PIN, GPIO_PIN_RESET);
-
-    GPIO_InitStruct.Pin = R_EN_FEEDER_PIN;
+    //activating pins: L_EN(PB13) R_EN(PB14)
+    GPIO_InitStruct.Pin = L_EN_FEEDER_PIN | R_EN_FEEDER_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOB, R_EN_FEEDER_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, L_EN_FEEDER_PIN | R_EN_FEEDER_PIN, GPIO_PIN_RESET);
 
-    //PWM: LPWM(PB13) RPWM(PB14)
+    //PWM: LPWM(PA8) RPWM(PA11)
     GPIO_InitStruct.Pin = LPWM_FEEDER_PIN | RPWM_FEEDER_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /*================================*/
     /* Opto sensor for home position  */
