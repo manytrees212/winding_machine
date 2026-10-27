@@ -36,18 +36,18 @@ extern "C" {
 /*================================*/
 /*   defines for motor pins       */
 /*================================*/
-#define L_EN_PIN        GPIO_PIN_10
-#define R_EN_PIN        GPIO_PIN_11
-#define LPWM_PIN        GPIO_PIN_7
-#define RPWM_PIN        GPIO_PIN_6
-#define L_IS_PIN        GPIO_PIN_0
-#define R_IS_PIN        GPIO_PIN_1
+#define L_EN_MOTOR_PIN  GPIO_PIN_10
+#define R_EN_MOTOR_PIN  GPIO_PIN_11
+#define LPWM_MOTOR_PIN  GPIO_PIN_7
+#define RPWM_MOTOR_PIN  GPIO_PIN_6
 
 /*================================*/
 /*   defines for feeder pins      */
 /*================================*/
-#define IN1_PIN         GPIO_PIN_13
-#define IN2_PIN         GPIO_PIN_14
+#define  L_EN_FEEDER_PIN GPIO_PIN_13
+#define  R_EN_FEEDER_PIN GPIO_PIN_14
+#define  LPWM_FEEDER_PIN GPIO_PIN_8
+#define  RPWM_FEEDER_PIN GPIO_PIN_11
 
 /*================================*/
 /*defines for sensor home position*/
@@ -61,7 +61,7 @@ extern "C" {
 #define MOTOR_ENCODER_CHANNEL_B     GPIO_PIN_1
 
 /*================================*/
-/*defines for rpm feeder encoderb */
+/*defines for rpm feeder encoder  */
 /*================================*/
 #define FEEDER_ENCODER_CHANNEL_A     GPIO_PIN_4
 #define FEEDER_ENCODER_CHANNEL_B     GPIO_PIN_5

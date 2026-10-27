@@ -88,8 +88,8 @@ int main(){
 
     static ButtonController button_controller;
 
-    static MotorDriver<BTS7960Config> motor;
-    static MotorDriver<DRV8871Config> feeder;
+    static MotorDriver<BTS7960ConfigMotor> motor;
+    static MotorDriver<BTS7960ConfigFeeder> feeder;
 
     static EncoderController encoder_ctrl(&htim2,
                                           &htim3,
@@ -171,7 +171,6 @@ int main(){
 
         if(is_feeder){
             winding_machine.UpdateFeederFlashData();
-            LED_On();
         }
 
         if(is_motor && is_feeder){
