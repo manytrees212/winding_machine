@@ -41,7 +41,7 @@ void TIM1_Init(){
         Error_Handler();
     }
 
-    //PWM for channel 1(IN1, PB13)
+    //PWM for channel 1(PA8)
     TIM_OC_InitTypeDef sConfigOC = {0};
     sConfigOC.OCMode = TIM_OCMODE_PWM1;         // Clear on match, set on reload
     sConfigOC.Pulse = 0;                        // Default 0% of duty cycle
@@ -55,32 +55,27 @@ void TIM1_Init(){
         Error_Handler();
     }
 
-    //PWM for channel 2(IN2, PB14)
+    //PWM for channel 4(PA11)
     sConfigOC.Pulse = 0;  // Start with 0% duty cycle
-    if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
+    if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK) {
         LOG_ERROR("TIM1 in PWM mode FAILED");
         Error_Handler();
     }
 
-    // UNLOCK ADVANCED TIM1 OUTPUTS
-    TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
-    sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-    sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-    sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-    sBreakDeadTimeConfig.DeadTime = 0;
-    sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-    sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-    sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-
-    // Main Output Enable (MOE) register!
-    if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK) {
-        LOG_ERROR("TIM1 BDTR Config FAILED");
+    TIM_BreakDeadTimeConfigTypeDef sBreak = {0};
+    sBreak.OffStateRunMode = TIM_OSSR_DISABLE;
+    sBreak.OffStateIDLEMode = TIM_OSSI_DISABLE;
+    sBreak.LockLevel = TIM_LOCKLEVEL_OFF;
+    sBreak.DeadTime = 0;
+    sBreak.BreakState = TIM_BREAK_DISABLE;
+    sBreak.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+    sBreak.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
+    if(HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreak) != HAL_OK){
+        LOG_ERROR("TIM1 sBreak FAILED");
         Error_Handler();
     }
 
-    HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_1);
-    HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
-    LOG_INFO("TIM1 CH1 and CH2 in PWM mode READY");
+    LOG_INFO("TIM1 CH1 and CH4 in PWM mode READY");
 }
 
 /*for motor encoder*/
@@ -185,7 +180,5 @@ void TIM4_Init(){
         Error_Handler();
     }
 
-    HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_2);
     LOG_INFO("TIM4 CH1 and CH2 in PWM mode READY");
 }
