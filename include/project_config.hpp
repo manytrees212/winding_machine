@@ -38,7 +38,6 @@ struct BTS7960ConfigMotor : public MotorConfig {
     static constexpr bool IS_COMPLEMENTARY = false;
     static constexpr std::uint16_t TIMER_PERIOD = 2047;
     // PWM pins
-    inline static GPIO_TypeDef* PWM_PORT = GPIOB;
     static constexpr std::uint16_t R_PWM_PIN = RPWM_MOTOR_PIN;
     static constexpr std::uint16_t L_PWM_PIN = LPWM_MOTOR_PIN;
     // Enable pins
@@ -53,15 +52,14 @@ struct BTS7960ConfigFeeder : public MotorConfig {
     // Using TIM1
     static constexpr TIM_HandleTypeDef* TIMER = &htim1;
     static constexpr std::uint32_t TIMER_CHANNEL_FWD = TIM_CHANNEL_1;
-    static constexpr std::uint32_t TIMER_CHANNEL_REV = TIM_CHANNEL_2;
-    static constexpr bool IS_COMPLEMENTARY = true;
+    static constexpr std::uint32_t TIMER_CHANNEL_REV = TIM_CHANNEL_4;
+    static constexpr bool IS_COMPLEMENTARY = false;
     static constexpr std::uint16_t TIMER_PERIOD = 4095;
     // PWM pins
-    inline static GPIO_TypeDef* PWM_PORT = GPIOB;
     static constexpr std::uint16_t R_PWM_PIN = RPWM_FEEDER_PIN;
     static constexpr std::uint16_t L_PWM_PIN = LPWM_FEEDER_PIN;
     // Enable pins
-    inline static GPIO_TypeDef* ENABLE_PORT_L = GPIOA;
+    inline static GPIO_TypeDef* ENABLE_PORT_L = GPIOB;
     inline static GPIO_TypeDef* ENABLE_PORT_R = GPIOB;
     static constexpr std::uint16_t L_PIN = L_EN_FEEDER_PIN;
     static constexpr std::uint16_t R_PIN = R_EN_FEEDER_PIN;

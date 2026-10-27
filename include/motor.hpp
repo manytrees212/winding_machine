@@ -27,7 +27,10 @@ public:
             HAL_TIM_PWM_Start(Config::TIMER, Config::TIMER_CHANNEL_FWD);
             HAL_TIM_PWM_Start(Config::TIMER, Config::TIMER_CHANNEL_REV);
         }
-        ApplyPWM(0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
+        EnableMotor(false);
+        static_assert(Config::MAX_SPEED > 0, "MAX_SPEED must be greater than 0");
     }
     ~MotorDriver()=default;
 
@@ -81,8 +84,6 @@ private:
 
     void ApplyPWM(uint8_t speed){
 
-        static_assert(Config::MAX_SPEED > 0, "MAX_SPEED must be greater than 0");
-
         std::uint32_t compare=0;
         if (speed > 0) {
             if constexpr (Config::TIMER_PERIOD == 4095) {
@@ -93,6 +94,9 @@ private:
                 compare = (static_cast<uint32_t>(speed) * Config::TIMER->Init.Period) / MotorConfig::MAX_SPEED;
             }
         }
+
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
 
         if(compare>0){
             switch(direction_){
@@ -106,9 +110,6 @@ private:
                 break;
             default: break;
             }
-        }else{
-            __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
-            __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
         }
     }
 
