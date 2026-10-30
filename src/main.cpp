@@ -4,6 +4,7 @@
 #include <logger.h>
 #include <logger_with_hal.h>
 #include <error_handler.h>
+#include <pid.hpp>
 
 #include "main.hpp"
 #include "project_config.hpp"
@@ -18,7 +19,6 @@
 #include "display_st7789.h"
 #include "motor.hpp"
 #include "encoder.hpp"
-#include "pid.hpp"
 #include "uart_cmd_parser.hpp"
 #include "winding_machine.hpp"
 

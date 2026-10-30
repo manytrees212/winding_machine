@@ -5,23 +5,26 @@ project(winding_machine C CXX ASM)
 # 0. BASE PATH DEFINITIONS
 # ============================================
 
-set(STM32_BASE ${CMAKE_CURRENT_SOURCE_DIR})
+set(PROJECT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMSIS_CORE_PATH ${STM32_BASE}/CMSIS/Core/CMSIS/Core)
-set(CMSIS_DEVICE_PATH ${STM32_BASE}/CMSIS/Device)
-set(HAL_DRIVER_PATH ${STM32_BASE}/HAL_Driver)
+set(CMSIS_CORE_PATH ${PROJECT_BASE_DIR}/CMSIS/Core/CMSIS/Core)
+set(CMSIS_DEVICE_PATH ${PROJECT_BASE_DIR}/CMSIS/Device)
+set(HAL_DRIVER_PATH ${PROJECT_BASE_DIR}/HAL_Driver)
 
 #Logger Library path
-set(LOGGER_PATH ${STM32_BASE}/lib_logger)
+set(LOGGER_PATH ${PROJECT_BASE_DIR}/lib_logger)
 
 #Error_handler library path
-set(ERROR_HANDLER_PATH ${STM32_BASE}/lib_error_handler)
+set(ERROR_HANDLER_PATH ${PROJECT_BASE_DIR}/lib_error_handler)
 
 #Display library path
-set(LIB_DISPLAYS_PATH ${STM32_BASE}/lib_displays)
+set(LIB_DISPLAYS_PATH ${PROJECT_BASE_DIR}/lib_displays)
 
 #EEPROM library path
-set(EEPROM_PATH ${STM32_BASE}/lib_eeprom)
+set(EEPROM_PATH ${PROJECT_BASE_DIR}/lib_eeprom)
+
+#PID library path
+set(PID_PATH ${PROJECT_BASE_DIR}/lib_pid)
 
 # ============================================
 # 1. ADD LIBRARIES
@@ -63,6 +66,7 @@ add_subdirectory(${LOGGER_PATH} ${CMAKE_CURRENT_BINARY_DIR}/logger)
 add_subdirectory(${ERROR_HANDLER_PATH} ${CMAKE_CURRENT_BINARY_DIR}/error_handler)
 add_subdirectory(${LIB_DISPLAYS_PATH}/stm32_st7789 ${CMAKE_CURRENT_BINARY_DIR}/stm32_st7789)
 add_subdirectory(${EEPROM_PATH} ${CMAKE_CURRENT_BINARY_DIR}/eeprom)
+add_subdirectory(${PID_PATH} ${CMAKE_CURRENT_BINARY_DIR}/pid)
 
 # ============================================
 # 2. SOURCE & HEADER FILES
@@ -84,7 +88,6 @@ set(PROJECT_HEADERS
     include/button_controller.hpp
     include/motor.hpp
     include/encoder.hpp
-    include/pid.hpp
     include/uart_cmd_parser.hpp
     include/winding_machine.hpp
 )
@@ -106,7 +109,6 @@ set(SOURCES
     src/flash_data_controller.cpp
     src/button_controller.cpp
     src/encoder.cpp
-    src/pid.cpp
     src/uart_cmd_parser.cpp
     src/winding_machine.cpp
     ${CMSIS_DEVICE_PATH}/Source/Templates/system_stm32f1xx.c
@@ -159,6 +161,7 @@ target_link_libraries(${PROJECT_NAME}.elf PRIVATE
     error_handler
     stm32_st7789 #spi tft_display
     eeprom
+    pid
     stm32_hardware_flags
 )
 

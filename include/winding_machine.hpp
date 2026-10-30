@@ -2,13 +2,14 @@
 #define WINDING_MACHINE_HPP
 
 #include <cstdint>
+#include <pid.hpp>
+
 #include "motor.hpp"
 #include <st7789.h>
 #include "display_st7789.h"
 #include "flash_data_controller.hpp"
 #include "motor.hpp"
 #include "encoder.hpp"
-#include "pid.hpp"
 #include "button_controller.hpp"
 
 enum class Function {Off, On};
