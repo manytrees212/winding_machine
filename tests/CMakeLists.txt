@@ -12,7 +12,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(unit_tests)
 
 target_sources(unit_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/utest_pid.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/unit_test_pid.cpp
 )
 
 target_link_libraries(unit_tests PRIVATE
