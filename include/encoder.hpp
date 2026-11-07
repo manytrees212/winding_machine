@@ -48,6 +48,7 @@ public:
     std::uint32_t GetTurnNumberScaled()const;
     std::uint32_t GetLastTurnNumberScaled()const;
 
+    std::uint16_t GetMotorCounts()const;
     std::int32_t GetFeederCounts();
 
     std::uint16_t GetBobbinRPM()const;

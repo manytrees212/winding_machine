@@ -7,19 +7,20 @@ Encoder::Encoder(TIM_HandleTypeDef* htim)
     : htim_(htim){
     if(htim_){
         __HAL_TIM_SET_COUNTER(htim_, CNT_MIDDLE);
+        LOG_INFO("Ctor ENCODER: time=%d", GetCounts());
     }
-    LOG_INFO("Ctor ENCODER: time=%d", GetCounts());
 }
 
 std::uint16_t Encoder::GetCounts()const{
-    if(htim_){
+    if(htim_ && htim_->Instance){
         return __HAL_TIM_GET_COUNTER(htim_);
     }
+    LOG_ERROR("ENCODER GetCounts: return ERROR_CNT");
     return ERROR_CNT;
 }
 
 void Encoder::SetCounter(std::uint16_t counts){
-    if(!htim_){
+    if(!htim_ || !htim_->Instance){
       LOG_ERROR("ENCODER SetCounter: timer invalid");
       return;
     }
@@ -27,7 +28,7 @@ void Encoder::SetCounter(std::uint16_t counts){
 }
 
 void Encoder::DisableCounting(){
-    if(!htim_){
+    if(!htim_ || !htim_->Instance){
         LOG_ERROR("ENCODER DisableCounting: timer invalid");
         return;
     }
@@ -76,6 +77,10 @@ std::uint16_t EncoderController::GetBobbinRPM_Scaled()const{
     return bobbin_rpm_scaled_;
 }
 
+std::uint16_t EncoderController::GetMotorCounts()const{
+    return motor_encoder_.GetCounts();
+}
+
 std::int32_t EncoderController::GetFeederCounts(){
     auto current_feeder_counts = feeder_encoder_.GetCounts();
     auto delta = static_cast<std::int16_t>(current_feeder_counts - last_feeder_counts_);
@@ -93,7 +98,11 @@ std::uint8_t EncoderController::GetScaleFactorTurns()const{
 }
 
 void EncoderController::SetFeederCounts(const std::int32_t counts){
-    feeder_encoder_.SetCounter(counts);
+    if(counts < 0){
+        LOG_INFO("ENCODER_CTRL SetFeederCounts: counts=%d", counts);
+        return;
+    }
+    feeder_encoder_.SetCounter(static_cast<std::uint16_t>(counts && 0xFFFF));
 }
 
 void EncoderController::ResetFeederCounts(){
