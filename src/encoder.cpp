@@ -20,7 +20,7 @@ std::uint16_t Encoder::GetCounts()const{
 
 void Encoder::SetCounter(std::uint16_t counts){
     if(!htim_){
-      LOG_ERROR("Ctor ENCODER: timer invalid");
+      LOG_ERROR("ENCODER SetCounter: timer invalid");
       return;
     }
     __HAL_TIM_SET_COUNTER(htim_, counts);
@@ -28,7 +28,7 @@ void Encoder::SetCounter(std::uint16_t counts){
 
 void Encoder::DisableCounting(){
     if(!htim_){
-        LOG_ERROR("Ctor ENCODER: timer invalid");
+        LOG_ERROR("ENCODER DisableCounting: timer invalid");
         return;
     }
     HAL_TIM_Encoder_Stop(htim_, TIM_CHANNEL_ALL);
@@ -36,7 +36,7 @@ void Encoder::DisableCounting(){
 
 void Encoder::EnableCounting(){
     if(!htim_){
-        LOG_ERROR("Ctor ENCODER: timer invalid");
+        LOG_ERROR("ENCODER EnableCounting: timer invalid");
         return;
     }
     HAL_TIM_Encoder_Start(htim_, TIM_CHANNEL_ALL);

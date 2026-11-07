@@ -31,6 +31,7 @@ WindingMachine::WindingMachine(ST7789_display* display,
             }
         }else{
             if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
+                LOG_INFO("Ctor WM: RESET FEEDER COUNT");
                 flash_data_ctrl_->SetFlashFeederCounts(0);
                 current_flash_feeder_counts=0;
             }
@@ -365,6 +366,7 @@ void WindingMachine::ProcessButtonOne(){
             if(feeder_driver_->GetState()==MotorState::Idle){
                 feeder_driver_->SetSpeed(feeder_driver_->GetMaxSpeed());
                 feeder_driver_->Start();
+                sync_flag_=false;
             }else{
                 feeder_driver_->Stop();
             }
@@ -681,8 +683,10 @@ void WindingMachine::SynchronizeTheFeeder(){
         feeder_pos = CalcFeederPosition(encoder_ctrl_->GetFeederCounts());
         error = pos_in_layer - feeder_pos;
         error = (error>0) ? error : -error;
-        if(error<error_border) error = 0;
-
+        if(error < error_border){
+            feeder_driver_->Stop();
+            break;
+        }
         UpdateFeederFlashData();
 
         button_ctrl_->ScanButtons();
@@ -731,18 +735,14 @@ void WindingMachine::CorrectFeederPos(){
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/encoder_ctrl_->GetScaleFactorTurns());
 
     if(feeder_pos >= max_pos_in_layer){
-
         StopMachine();
-        SynchronizeTheFeeder();
-
         feeder_driver_->SetDirection(Direction::Reverse);
         DisplayFeederDirection();
-
         LOG_INFO("FEEDER IS IN MAX POSITION");
         return;
     }
 
-    std::uint32_t speed=0;
+    std::uint16_t speed=0;
     if(feeder_driver_->GetDirection()==Direction::Reverse){
         pos_in_layer=max_pos_in_layer-pos_in_layer;
         speed = pid_ctrl_->ComputeSpeed(feeder_pos, pos_in_layer,  dt_ms);

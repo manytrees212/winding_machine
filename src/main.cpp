@@ -59,7 +59,7 @@ int main(){
     if (config.need_write == 1) {
         flash_data_controller.WriteFlashData();
     }
-    LOG_INFO("Configuration EEPROM:\
+    LOG_INFO("1.Configuration EEPROM:\
                 current_turns=%d,\
                 total_turns=%d,\
                 feeder_counts=%d,\
@@ -83,25 +83,32 @@ int main(){
     if(ST7789_init(&disp_st7789, &hw)!=Disp_st7789_OK){
         LOG_ERROR("Display ST7789 Init() FAILED");
     }else{
-        LOG_INFO("Display ST7789 READY");
+        LOG_INFO("2.Display ST7789 READY");
     }
 
     static ButtonController button_controller;
+    LOG_INFO("3.Button_ctrl READY");
 
     static MotorDriver<BTS7960ConfigMotor> motor;
+    LOG_INFO("4.Motor_driver READY");
+
     static MotorDriver<BTS7960ConfigFeeder> feeder;
+    LOG_INFO("5.Feeder_driver READY");
 
     static EncoderController encoder_ctrl(&htim2,
                                           &htim3,
                                           flash_data_controller.GetFlashCurrentTurns());
+    LOG_INFO("6.Encoder_ctrl READY");
 
     static PID pid(flash_data_controller.GetKpScaled(),
                    flash_data_controller.GetKiScaled(),
                    flash_data_controller.GetKdScaled(),
                    0,
                    100);
+    LOG_INFO("7.PID READY");
 
     static UartCmdParser uart_cmd_parser;
+    LOG_INFO("8.UART_parser READY");
 
     static WindingMachine winding_machine(&disp_st7789,
                                    &flash_data_controller,
@@ -111,6 +118,7 @@ int main(){
                                    &pid,
                                    &button_controller);
     machine_ptr=&winding_machine;
+    LOG_INFO("9.WM READY");
 
     /*to prevent extra display updating*/
     auto last_bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
@@ -120,6 +128,7 @@ int main(){
 
     std::uint32_t last_ms = HAL_GetTick();
 
+    LOG_INFO("10.Main Loop start");
     while(1){
         //process home position
         if(winding_machine.GetHomeFlag()){
