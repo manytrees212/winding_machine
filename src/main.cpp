@@ -95,6 +95,14 @@ int main(){
     static MotorDriver<BTS7960ConfigFeeder> feeder;
     LOG_INFO("5.Feeder_driver READY");
 
+    if(!htim2.Instance){
+        LOG_ERROR("TIM2 fail");
+        Error_Handler();
+    }
+    if(!htim3.Instance){
+        LOG_ERROR("TIM3 fail");
+        Error_Handler();
+    }
     static EncoderController encoder_ctrl(&htim2,
                                           &htim3,
                                           flash_data_controller.GetFlashCurrentTurns());
@@ -118,6 +126,11 @@ int main(){
                                    &pid,
                                    &button_controller);
     machine_ptr=&winding_machine;
+
+    if(!winding_machine.WindingMachineInit()){
+        LOG_ERROR("WindingMachineInit fail");
+        Error_Handler();
+    }
     LOG_INFO("9.WM READY");
 
     /*to prevent extra display updating*/

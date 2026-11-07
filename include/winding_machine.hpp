@@ -29,6 +29,7 @@ public:
     ~WindingMachine()=default;
 
 public:
+    bool WindingMachineInit();
     void ProcessButtons(uint8_t button);
     void UpdateMotorFlashData();
     void UpdateFeederFlashData();

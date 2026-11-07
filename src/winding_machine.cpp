@@ -20,47 +20,83 @@ WindingMachine::WindingMachine(ST7789_display* display,
     , encoder_ctrl_(encoder_ctrl)
     , pid_ctrl_(pid)
     , button_ctrl_(button_ctrl){
+}
 
-        auto current_flash_feeder_counts = flash_data_ctrl_->GetFlashFeederCounts();
-        if(current_flash_feeder_counts==0){
-            if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)!=GPIO_PIN_RESET){
-                LOG_INFO("Ctor WM: WRONG FEEDER POS");
-                ResetTrueFeederPosFlag();
-                ResetHomeFlag();
-                encoder_ctrl_->StopFeederCounting();
-            }
-        }else{
-            if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
-                LOG_INFO("Ctor WM: RESET FEEDER COUNT");
-                flash_data_ctrl_->SetFlashFeederCounts(0);
-                current_flash_feeder_counts=0;
-            }
+bool WindingMachine::WindingMachineInit(){
+
+    if(!display_){
+        LOG_ERROR("display_ is invalid");
+        return false;
+    }
+    if(!flash_data_ctrl_){
+        LOG_ERROR("flash_data_ctrl_ is invalid");
+        return false;
+    }
+    if(!motor_driver_){
+        LOG_ERROR("motor_driver_ is invalid");
+        return false;
+    }
+    if(!feeder_driver_){
+        LOG_ERROR("feeder_driver_ is invalid");
+        return false;
+    }
+    if(!encoder_ctrl_){
+        LOG_ERROR("encoder_ctrl_ is invalid");
+        return false;
+    }
+    if(!pid_ctrl_){
+        LOG_ERROR("pid_ctrl_ is invalid");
+        return false;
+    }
+    if(!button_ctrl_){
+        LOG_ERROR("button_ctrl_ is invalid");
+        return false;
+    }
+
+    auto current_flash_feeder_counts = flash_data_ctrl_->GetFlashFeederCounts();
+    if(current_flash_feeder_counts==0){
+        if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)!=GPIO_PIN_RESET){
+            LOG_INFO("Ctor WM: WRONG FEEDER POS");
+            ResetTrueFeederPosFlag();
+            ResetHomeFlag();
+            encoder_ctrl_->StopFeederCounting();
         }
-
-        if(true_feeder_pos_flag_){
-            encoder_ctrl_->ResetFeederCounts();/*to clean timer*/
-            encoder_ctrl_->SetFeederCounts(static_cast<std::int32_t>(current_flash_feeder_counts));
-            auto current_counts = encoder_ctrl_->GetFeederCounts();
-            LOG_INFO("Ctor WM:\
-                     encoder_feeder_cnt=%d,\
-                     feeder_pos=%d,\
-                     flash_feeder_cnt=%d",
-                     current_counts,
-                     CalcFeederPosition(current_counts),
-                     flash_data_ctrl_->GetFlashFeederCounts()
-                     );
+    }else{
+        if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
+            LOG_INFO("Ctor WM: RESET FEEDER COUNT");
+            flash_data_ctrl_->SetFlashFeederCounts(0);
+            current_flash_feeder_counts=0;
         }
-        display_turns_=flash_data_ctrl_->GetFlashCurrentTurns();
+    }
 
-        auto flash_feeder_counts=flash_data_ctrl_->GetFlashFeederCounts();
-        auto feeder_pos = CalcFeederPosition(static_cast<std::int32_t>(flash_feeder_counts));
-        display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/100);
+    if(true_feeder_pos_flag_){
+        encoder_ctrl_->ResetFeederCounts();/*to clean timer*/
+        encoder_ctrl_->SetFeederCounts(static_cast<std::int32_t>(current_flash_feeder_counts));
+        auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
+        LOG_INFO("Ctor WM:\
+                 encoder_motor_cnt=%d,\
+                 encoder_feeder_cnt=%d,\
+                 feeder_pos=%d,\
+                 flash_feeder_cnt=%d",
+                 encoder_ctrl_->GetMotorCounts(),
+                 current_feeder_counts,
+                 CalcFeederPosition(current_feeder_counts),
+                 flash_data_ctrl_->GetFlashFeederCounts()
+                 );
+    }
+    display_turns_=flash_data_ctrl_->GetFlashCurrentTurns();
 
-        DisplayMainPage();
-        LOG_INFO("Ctor WM: true_feeder_flag=%d, home_flag=%d, sync_flag=%d",
-                 true_feeder_pos_flag_,
-                 home_pos_flag_,
-                 sync_flag_);
+    auto flash_feeder_counts=flash_data_ctrl_->GetFlashFeederCounts();
+    auto feeder_pos = CalcFeederPosition(static_cast<std::int32_t>(flash_feeder_counts));
+    display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/100);
+
+    DisplayMainPage();
+    LOG_INFO("Ctor WM: true_feeder_flag=%d, home_flag=%d, sync_flag=%d",
+             true_feeder_pos_flag_,
+             home_pos_flag_,
+             sync_flag_);
+
+    return true;
 }
 
 void WindingMachine::DisplayMainPage()const{
