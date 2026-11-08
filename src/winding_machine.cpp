@@ -56,14 +56,14 @@ bool WindingMachine::WindingMachineInit(){
     auto current_flash_feeder_counts = flash_data_ctrl_->GetFlashFeederCounts();
     if(current_flash_feeder_counts==0){
         if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)!=GPIO_PIN_RESET){
-            LOG_INFO("Ctor WM: WRONG FEEDER POS");
+            LOG_INFO("WM init: WRONG FEEDER POS");
             ResetTrueFeederPosFlag();
             ResetHomeFlag();
             encoder_ctrl_->StopFeederCounting();
         }
     }else{
         if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
-            LOG_INFO("Ctor WM: RESET FEEDER COUNT");
+            LOG_INFO("WM init: RESET FEEDER COUNT");
             flash_data_ctrl_->SetFlashFeederCounts(0);
             current_flash_feeder_counts=0;
         }
@@ -73,7 +73,7 @@ bool WindingMachine::WindingMachineInit(){
         encoder_ctrl_->ResetFeederCounts();/*to clean timer*/
         encoder_ctrl_->SetFeederCounts(static_cast<std::int32_t>(current_flash_feeder_counts));
         auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
-        LOG_INFO("Ctor WM:\
+        LOG_INFO("WM init:\
                  encoder_motor_cnt=%d,\
                  encoder_feeder_cnt=%d,\
                  feeder_pos=%d,\
@@ -91,7 +91,7 @@ bool WindingMachine::WindingMachineInit(){
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/100);
 
     DisplayMainPage();
-    LOG_INFO("Ctor WM: true_feeder_flag=%d, home_flag=%d, sync_flag=%d",
+    LOG_INFO("WM init: true_feeder_flag=%d, home_flag=%d, sync_flag=%d",
              true_feeder_pos_flag_,
              home_pos_flag_,
              sync_flag_);
