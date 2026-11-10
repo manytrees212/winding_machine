@@ -47,6 +47,7 @@ public:
     std::uint16_t GetTurnPosition()const;
 
     void StopMachine();
+    void UpdateDisplayAfterStop();
 
     void DisplayCurrentTurns()const;
     void DisplayTotalTurns()const;
@@ -82,6 +83,12 @@ private:
     void ProcessButtonSeven();
 
     void SynchronizeTheFeeder();
+    void SyncOff();
+
+    void MotorStart();
+    void MotorStop();
+    void FeederStart();
+    void FeederStop();
 
     void StartStop();
     void StartStopFeederSync();
