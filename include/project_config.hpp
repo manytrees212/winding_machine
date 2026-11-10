@@ -11,10 +11,10 @@ struct ProjectConfig{
     std::uint16_t total_turns = 1000;
     std::uint16_t feeder_counts = 0;
     std::uint16_t max_feeder_counts = 4800;
-    std::uint8_t wire_diameter_scaled = 30;
+    std::uint8_t wire_diameter_scaled = 50;
     std::uint8_t Kp_scaled = 80;
     std::uint8_t Ki_scaled = 5;
-    std::uint8_t Kd_scaled = 20;
+    std::uint8_t Kd_scaled = 5;
     std::uint8_t can_read = 0;
     std::uint8_t need_write = 1;
 };
