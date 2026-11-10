@@ -86,37 +86,29 @@ int main(){
         LOG_INFO("2.Display ST7789 READY");
     }
 
-    static ButtonController button_controller;
-    LOG_INFO("3.Button_ctrl READY");
-
-    static MotorDriver<BTS7960ConfigMotor> motor;
-    LOG_INFO("4.Motor_driver READY");
-
-    static MotorDriver<BTS7960ConfigFeeder> feeder;
-    LOG_INFO("5.Feeder_driver READY");
-
-    if(!htim2.Instance){
-        LOG_ERROR("TIM2 fail");
-        Error_Handler();
-    }
-    if(!htim3.Instance){
-        LOG_ERROR("TIM3 fail");
-        Error_Handler();
-    }
-    static EncoderController encoder_ctrl(&htim2,
-                                          &htim3,
-                                          flash_data_controller.GetFlashCurrentTurns());
-    LOG_INFO("6.Encoder_ctrl READY");
-
-    static PID pid(flash_data_controller.GetKpScaled(),
+    PID pid(flash_data_controller.GetKpScaled(),
                    flash_data_controller.GetKiScaled(),
                    flash_data_controller.GetKdScaled(),
                    0,
                    100);
-    LOG_INFO("7.PID READY");
+    LOG_INFO("3.PID READY");
 
-    static UartCmdParser uart_cmd_parser;
-    LOG_INFO("8.UART_parser READY");
+    UartCmdParser uart_cmd_parser;
+    LOG_INFO("4.UART_parser READY");
+
+    static ButtonController button_controller;
+    LOG_INFO("5.Button_ctrl READY");
+
+    static MotorDriver<BTS7960ConfigMotor> motor;
+    LOG_INFO("6.Motor_driver READY");
+
+    static MotorDriver<BTS7960ConfigFeeder> feeder;
+    LOG_INFO("7.Feeder_driver READY");
+
+    static EncoderController encoder_ctrl(&htim2,
+                                          &htim3,
+                                          flash_data_controller.GetFlashCurrentTurns());
+    LOG_INFO("8.Encoder_ctrl READY");
 
     static WindingMachine winding_machine(&disp_st7789,
                                    &flash_data_controller,
@@ -142,6 +134,7 @@ int main(){
     std::uint32_t last_ms = HAL_GetTick();
 
     LOG_INFO("10.Main Loop start");
+
     while(1){
         //process home position
         if(winding_machine.GetHomeFlag()){
@@ -165,10 +158,8 @@ int main(){
                      flash_data_controller.GetFlashFeederCounts(),
                      winding_machine.CalcFeederPosition(current_feeder_counts));
 
-            winding_machine.DisplayFeederPosition();
-
             feeder.SetDirection(Direction::Forward);
-            winding_machine.DisplayFeederDirection();
+            winding_machine.UpdateDisplayAfterStop();
         }
 
         //scan and process buttons
@@ -222,29 +213,25 @@ int main(){
 
         auto now_ms=HAL_GetTick();
         if((now_ms-last_ms) > 1000){/*update display 1000 ms*/
-            if(is_motor){
-                auto bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
-                auto turns = winding_machine.GetDisplayTurns();
-                auto speed = winding_machine.GetDisplaySpeed();
-                if(last_bobbin_rpm != bobbin_rpm){
-                    winding_machine.DisplayBobbinRPM();
-                    last_bobbin_rpm=bobbin_rpm;
-                }
-                if(turns != last_turn){
-                    winding_machine.DisplayCurrentTurns();
-                    last_turn=turns;
-                }
-                if(speed != last_speed){
-                    winding_machine.DisplayCurrentSpeed();
-                    last_speed=speed;
-                }
+            auto bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
+            auto turns = winding_machine.GetDisplayTurns();
+            auto speed = winding_machine.GetDisplaySpeed();
+            auto feeder_pos = winding_machine.GetDisplayFeederPos();
+            if(last_bobbin_rpm != bobbin_rpm){
+                winding_machine.DisplayBobbinRPM();
+                last_bobbin_rpm=bobbin_rpm;
             }
-            if(is_feeder){
-                auto feeder_pos = winding_machine.GetDisplayFeederPos();
-                if(feeder_pos != last_feeder_pos){
-                    winding_machine.DisplayFeederPosition();
-                    last_feeder_pos=feeder_pos;
-                }
+            if(turns != last_turn){
+                winding_machine.DisplayCurrentTurns();
+                last_turn=turns;
+            }
+            if(speed != last_speed){
+                winding_machine.DisplayCurrentSpeed();
+                last_speed=speed;
+            }
+            if(feeder_pos != last_feeder_pos){
+                winding_machine.DisplayFeederPosition();
+                last_feeder_pos=feeder_pos;
             }
             last_ms=now_ms;
         }
