@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <stm32f1xx_hal.h>
 
-static constexpr std::uint16_t  CNT_MIDDLE = 32767;
-static constexpr std::uint16_t ERROR_CNT = 54079;
+static constexpr std::uint32_t  CNT_MIDDLE = 32767;
+static constexpr std::uint32_t ERROR_CNT = 54079;
 
 class Encoder{
 public:
@@ -13,7 +13,7 @@ public:
     explicit Encoder(TIM_HandleTypeDef* htim);
     ~Encoder()=default;
 
-    std::uint16_t GetCounts()const;
+    std::uint32_t GetCounts()const;
     void SetCounter(std::uint16_t counts);
     void DisableCounting();
     void EnableCounting();
@@ -36,7 +36,7 @@ public:
     void UpdateTurnNumber();
     void UpdateMaxFeederCounts();
     void ResetFeederCounts();
-    void SetFeederCounts(const std::int32_t counts);
+    void SetFeederCounts(const std::uint16_t counts);
 
     void StartFeederCounting();
     void StopFeederCounting();
@@ -79,18 +79,19 @@ private:
 private:
     Encoder motor_encoder_;
     Encoder feeder_encoder_;
+    std::int32_t  turn_number_scaled_;
+
     std::uint32_t last_motor_update_time_{0};
     std::uint32_t last_feeder_update_time_{0};
     std::int32_t extended_feeder_counts_{0};
+    std::uint32_t last_feeder_counts_{0};
+    std::uint32_t last_update_feeder_counts_{0};
 
-    std::int32_t  turn_number_scaled_ = 0;
     std::int32_t  last_turn_number_scaled_ = 0;
     std::int16_t  motor_counts_per_update_= 0;
-    std::uint16_t bobbin_rpm_buff_[BUFF_SIZE];
     std::uint16_t bobbin_rpm_scaled_ = 0;
+    std::uint16_t  bobbin_rpm_buff_[BUFF_SIZE]={0};
 
-    std::uint16_t last_feeder_counts_{CNT_MIDDLE};
-    std::uint16_t last_update_feeder_counts_{0};
     bool motor_encoder_has_updated_{false};
     bool feeder_encoder_has_updated_{false};
 };

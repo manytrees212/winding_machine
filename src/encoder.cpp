@@ -11,7 +11,7 @@ Encoder::Encoder(TIM_HandleTypeDef* htim)
     }
 }
 
-std::uint16_t Encoder::GetCounts()const{
+std::uint32_t Encoder::GetCounts()const{
     if(htim_ && htim_->Instance){
         return __HAL_TIM_GET_COUNTER(htim_);
     }
@@ -48,12 +48,11 @@ EncoderController::EncoderController(TIM_HandleTypeDef* htim_ptr1,
                                      std::uint16_t init_turns)
     :motor_encoder_(htim_ptr1)
     ,feeder_encoder_(htim_ptr2)
-    ,turn_number_scaled_(init_turns*SCALE_FACTOR_TURNS){
-        for(std::uint8_t i=0; i<BUFF_SIZE; ++i){
-            bobbin_rpm_buff_[i]=0;
-        }
-        LOG_INFO("Ctor ENCODER_CTRL: motor_tim_cnt=%d", motor_encoder_.GetCounts());
-        LOG_INFO("Ctor ENCODER_CTRL: feeder_tim_cnt=%d", feeder_encoder_.GetCounts());
+    ,turn_number_scaled_(static_cast<std::int32_t>(init_turns)*SCALE_FACTOR_TURNS){
+        LOG_INFO("Ctor ENCODER_CTRL: init_turns=%d\
+                 encoder_turns=%d",
+                 init_turns,
+                 GetTurnNumberScaled());
     }
 
 std::uint16_t EncoderController::GetTurnNumber()const{
@@ -84,7 +83,7 @@ std::uint16_t EncoderController::GetMotorCounts()const{
 std::int32_t EncoderController::GetFeederCounts(){
     auto current_feeder_counts = feeder_encoder_.GetCounts();
     auto delta = static_cast<std::int16_t>(current_feeder_counts - last_feeder_counts_);
-    extended_feeder_counts_+=delta;
+    extended_feeder_counts_+=static_cast<std::int32_t>(delta);
     last_feeder_counts_=current_feeder_counts;
     return extended_feeder_counts_;
 }
@@ -97,12 +96,10 @@ std::uint8_t EncoderController::GetScaleFactorTurns()const{
     return SCALE_FACTOR_TURNS;
 }
 
-void EncoderController::SetFeederCounts(const std::int32_t counts){
-    if(counts < 0){
-        LOG_INFO("ENCODER_CTRL SetFeederCounts: counts=%d", counts);
-        return;
-    }
-    feeder_encoder_.SetCounter(static_cast<std::uint16_t>(counts && 0xFFFF));
+void EncoderController::SetFeederCounts(const std::uint16_t counts){
+    feeder_encoder_.SetCounter(counts);
+    extended_feeder_counts_=counts;
+    last_feeder_counts_=counts;
 }
 
 void EncoderController::ResetFeederCounts(){
