@@ -1,12 +1,11 @@
 #include "flash_data_controller.hpp"
 #include "project_config.hpp"
-#include <eeprom.h>
+
 #include <logger.h>
 #include <logger_with_hal.h>
 #include <error_handler.h>
 
-FlashDataController::FlashDataController(ProjectConfig* config,
-                                         const std::uint16_t *VirtAddrVarTab)
+FlashDataController::FlashDataController(ProjectConfig* config, const std::uint16_t (&VirtAddrVarTab)[NB_OF_VAR])
     :config_(config)
     , virt_addr_var_tab_(VirtAddrVarTab){
         if(virt_addr_var_tab_ == nullptr){
@@ -17,7 +16,8 @@ FlashDataController::FlashDataController(ProjectConfig* config,
 
 void FlashDataController::WriteFlashData(){
     std::uint16_t write_data[NB_OF_VAR] = {
-        config_->current_turns,
+        config_->current_turns_scaled_1,
+        config_->current_turns_scaled_2,
         config_->total_turns,        
         config_->feeder_counts,
         config_->max_feeder_counts,
@@ -34,17 +34,24 @@ void FlashDataController::WriteFlashData(){
             return;
         }
     }
-    LOG_INFO("FlashData written:\
-            current_turns=%d,\
-            total_turns=%d,\
+
+    auto current_turns_scaled_1 = config_->current_turns_scaled_1;
+    auto current_turns_scaled_2 = config_->current_turns_scaled_2;
+    LOG_INFO("WriteFlashData:\
+            current_turns_scaled_1=%d\
+            current_turns_scaled_2=%d\
+            current_turns=%d",
+            current_turns_scaled_1,
+            current_turns_scaled_2,
+            current_turns_scaled_1 + current_turns_scaled_2);
+
+    LOG_INFO("WriteFlashData:\
             feeder_counts=%d,\
             max_feeder_counts=%d,\
-            wire_diameter=%d,\
+            wire_diameter_scaled=%d,\
             Kp_scaled=%d,\
             Ki_scaled=%d,\
             Kd_scaled=%d",
-            config_->current_turns,
-            config_->total_turns,
             config_->feeder_counts,
             config_->max_feeder_counts,
             config_->wire_diameter_scaled,
@@ -54,7 +61,7 @@ void FlashDataController::WriteFlashData(){
 }
 
 void FlashDataController::ResetFlashData(){
-    std::uint16_t reset_data[NB_OF_VAR]={0,0,0,0,0,0,0,0,0,1};
+    std::uint16_t reset_data[NB_OF_VAR]={0,0,0,0,0,0,0,0,0,0,1};
     for(std::uint8_t i = 0; i < NB_OF_VAR; ++i){
         if(EE_WriteVariable(virt_addr_var_tab_[i], reset_data[i])!=HAL_OK){
             LOG_ERROR("Flash was not reseted");
@@ -86,10 +93,18 @@ void FlashDataController::ProcessUartCommand(const UartCommand cmd){
     }
 }
 
-void FlashDataController::SetFlashCurrentTurns(const std::uint16_t turns_number){
-    if(turns_number<=config_->total_turns){
-        config_->current_turns=turns_number;
-    }
+void FlashDataController::SetFlashCurrentTurnsScaled(const std::uint32_t turns_number_scaled){
+
+    auto total_turns_scaled = static_cast<std::uint32_t>(config_->total_turns)*SCALE;
+    if(turns_number_scaled > total_turns_scaled){
+        LOG_INFO("SetFlashCurrentTurnsScaled: turns overload");
+        return;
+    }    
+    auto low_part = static_cast<std::uint16_t>(turns_number_scaled & 0xFFFF);
+    auto apper_part = static_cast<std::uint16_t>((turns_number_scaled >> 16) & 0xFFFF);
+
+    config_->current_turns_scaled_1 = low_part;
+    config_->current_turns_scaled_2 = apper_part;
 }
 
 void FlashDataController::SetFlashFeederCounts(const std::uint16_t feeder_counts){
@@ -112,7 +127,7 @@ void FlashDataController::SetKdScaled(const std::uint8_t Kd){
     if(Kd<100) config_->Kd_scaled = Kd;
 }
 
-std::uint8_t FlashDataController::GetScaleOfWireDiam()const{
+std::uint8_t FlashDataController::GetScale()const{
     return SCALE;
 }
 
@@ -124,8 +139,12 @@ std::uint16_t FlashDataController::GetFlashTotalTurns() const{
     return config_->total_turns;
 }
 
-std::uint16_t FlashDataController::GetFlashCurrentTurns() const{
-    return config_->current_turns;
+std::uint32_t FlashDataController::GetFlashCurrentTurnsScaled() const{
+
+    auto low_part = static_cast<std::uint32_t>(config_->current_turns_scaled_1);
+    auto upper_part = static_cast<std::uint32_t>(config_->current_turns_scaled_2);
+
+    return ((upper_part<<16) | low_part) ;
 }
 
 std::uint16_t FlashDataController::GetFlashFeederCounts() const{

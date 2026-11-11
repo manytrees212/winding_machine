@@ -7,7 +7,8 @@
 #include "gpio.h"
 
 struct ProjectConfig{
-    std::uint16_t current_turns = 0;
+    std::uint16_t current_turns_scaled_1 = 0;
+    std::uint16_t current_turns_scaled_2 = 0;
     std::uint16_t total_turns = 1000;
     std::uint16_t feeder_counts = 0;
     std::uint16_t max_feeder_counts = 4800;

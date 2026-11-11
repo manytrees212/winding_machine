@@ -23,7 +23,8 @@
 #include "winding_machine.hpp"
 
 extern "C" const uint16_t VirtAddVarTab[NB_OF_VAR] = {/*defenition for eeprom*/
-    VAR_CURRENT_TURNS,
+    VAR_CURRENT_TURNS_1,
+    VAR_CURRENT_TURNS_2,
     VAR_TOTAL_TURNS,
     VAR_FEEDER_COUNTS,
     VAR_MAX_FEEDER_COUNTS,
@@ -53,18 +54,18 @@ int main(){
     Chip_Init();
 
     static ProjectConfig config;
-    EEPROM_Data_Init(&VirtAddVarTab[0], config);
+    EEPROM_Data_Init(VirtAddVarTab, config);
 
-    static FlashDataController flash_data_controller(&config, &VirtAddVarTab[0]);
+    static FlashDataController flash_data_controller(&config, VirtAddVarTab);
     if (config.need_write == 1) {
         flash_data_controller.WriteFlashData();
     }
     LOG_INFO("1.Configuration EEPROM:\
-                current_turns=%d,\
+                current_turns_scaled=%d,\
                 total_turns=%d,\
                 feeder_counts=%d,\
                 max_feeder_counts=%d",
-                flash_data_controller.GetFlashCurrentTurns(),
+                flash_data_controller.GetFlashCurrentTurnsScaled(),
                 flash_data_controller.GetFlashTotalTurns(),
                 flash_data_controller.GetFlashFeederCounts(),
                 flash_data_controller.GetMaxFlashFeederCounts()
@@ -87,10 +88,10 @@ int main(){
     }
 
     PID pid(flash_data_controller.GetKpScaled(),
-                   flash_data_controller.GetKiScaled(),
-                   flash_data_controller.GetKdScaled(),
-                   0,
-                   100);
+            flash_data_controller.GetKiScaled(),
+            flash_data_controller.GetKdScaled(),
+            0,
+            100);
     LOG_INFO("3.PID READY");
 
     UartCmdParser uart_cmd_parser;
@@ -107,7 +108,7 @@ int main(){
 
     static EncoderController encoder_ctrl(&htim2,
                                           &htim3,
-                                          flash_data_controller.GetFlashCurrentTurns());
+                                          flash_data_controller.GetFlashCurrentTurnsScaled());
     LOG_INFO("8.Encoder_ctrl READY");
 
     static WindingMachine winding_machine(&disp_st7789,
@@ -159,6 +160,7 @@ int main(){
                      winding_machine.CalcFeederPosition(current_feeder_counts));
 
             feeder.SetDirection(Direction::Forward);
+            winding_machine.DisplayFeederDirection();
             winding_machine.UpdateDisplayAfterStop();
         }
 

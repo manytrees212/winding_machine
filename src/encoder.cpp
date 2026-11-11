@@ -19,7 +19,7 @@ std::uint32_t Encoder::GetCounts()const{
     return ERROR_CNT;
 }
 
-void Encoder::SetCounter(std::uint16_t counts){
+void Encoder::SetCounter(std::uint32_t counts){
     if(!htim_ || !htim_->Instance){
       LOG_ERROR("ENCODER SetCounter: timer invalid");
       return;
@@ -45,19 +45,18 @@ void Encoder::EnableCounting(){
 
 EncoderController::EncoderController(TIM_HandleTypeDef* htim_ptr1,
                                      TIM_HandleTypeDef* htim_ptr2,
-                                     std::uint16_t init_turns)
+                                     std::uint32_t init_turns_scaled)
     :motor_encoder_(htim_ptr1)
     ,feeder_encoder_(htim_ptr2)
-    ,turn_number_scaled_(static_cast<std::int32_t>(init_turns)*SCALE_FACTOR_TURNS){
+    ,turn_number_scaled_(static_cast<std::int32_t>(init_turns_scaled)){
         LOG_INFO("Ctor ENCODER_CTRL: init_turns=%d\
                  encoder_turns=%d",
-                 init_turns,
+                 init_turns_scaled,
                  GetTurnNumberScaled());
     }
 
-std::uint16_t EncoderController::GetTurnNumber()const{
-    auto real_turn = static_cast<std::int16_t>(turn_number_scaled_/SCALE_FACTOR_TURNS);
-    return real_turn;
+std::int32_t EncoderController::GetTurnNumber()const{
+    return turn_number_scaled_/SCALE_FACTOR_TURNS;
 }
 
 std::uint32_t EncoderController::GetTurnNumberScaled()const{
@@ -108,41 +107,19 @@ void EncoderController::ResetFeederCounts(){
     last_feeder_counts_=0;
 }
 
-std::uint16_t EncoderController::FindMajorityValue(std::uint16_t* buff, std::uint16_t size){
-
-    if(!buff || size == 0) return 0;
-
-    std::uint16_t most_freq = buff[0];
-    std::uint16_t cnt = 1;
-
-    /*not full algorithm of searching the majority*/
-    for(std::uint8_t i=1; i<size; ++i){
-        if(buff[i]==most_freq && most_freq!=0){
-            ++cnt;
-        }else{
-            --cnt;
-        }
-        if(cnt==0){
-            most_freq=buff[i];
-            ++cnt;
-        }
-    }
-    return most_freq;
-}
-
 void EncoderController::UpdateTurnNumber(){
-    std::uint16_t motor_current_counts = motor_encoder_.GetCounts();
+    auto motor_current_counts = motor_encoder_.GetCounts();
     motor_encoder_.SetCounter(CNT_MIDDLE);
 
-    motor_counts_per_update_ = motor_current_counts - CNT_MIDDLE;
+    motor_counts_per_update_ = static_cast<std::uint16_t>(motor_current_counts - CNT_MIDDLE);
     if(motor_counts_per_update_==0){
         motor_encoder_has_updated_=false;
         return;
     }
 
-    auto motor_turns_number_scaled = static_cast<std::int32_t>((motor_counts_per_update_ * SCALE_FACTOR_TURNS) / REAL_COUNTS_PER_REV); // motor output
+    auto turns_number_raw_scaled = static_cast<std::int32_t>((motor_counts_per_update_ * SCALE_FACTOR_TURNS) / REAL_COUNTS_PER_REV); // motor output
     last_turn_number_scaled_=turn_number_scaled_;
-    turn_number_scaled_+=(motor_turns_number_scaled*GEAR_RATIO_SCALED/SCALE_FACTOR_RATIO); //bobbin turns
+    turn_number_scaled_+=(turns_number_raw_scaled*GEAR_RATIO_SCALED/SCALE_FACTOR_RATIO); //bobbin turns
     if(turn_number_scaled_<0){
         turn_number_scaled_=0;
     }
@@ -157,22 +134,13 @@ void EncoderController::ReadMotorEncoderData(){
     if(!motor_encoder_has_updated_){
         return;
     }
-
     // calc bobbin RMP:
-    static std::uint16_t index = 0;
-    if(index==BUFF_SIZE) index = 0;
-
     std::int32_t rpm_scaled_raw = (motor_counts_per_update_ * UPDATE_INTERVAL_MIN * SCALE_FACTOR_RMP) / REAL_COUNTS_PER_REV;
     if (rpm_scaled_raw < 0){
         rpm_scaled_raw = -rpm_scaled_raw;
     }
-
     auto rpm_scaled_=static_cast<std::uint16_t>(rpm_scaled_raw*GEAR_RATIO_SCALED/SCALE_FACTOR_RATIO);
-    bobbin_rpm_buff_[index]=rpm_scaled_;
-
-    bobbin_rpm_scaled_=FindMajorityValue(&bobbin_rpm_buff_[0], BUFF_SIZE);
-
-    ++index;
+    bobbin_rpm_scaled_=static_cast<std::uint16_t>((rpm_scaled_ + bobbin_rpm_scaled_*7)/8);
 }
 
 void EncoderController::UpdateMotorEncoderData(){
@@ -183,7 +151,6 @@ void EncoderController::UpdateMotorEncoderData(){
         return;
     }
     last_motor_update_time_ = current_time;
-
     ReadMotorEncoderData();
 }
 
