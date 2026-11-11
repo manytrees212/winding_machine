@@ -82,16 +82,19 @@ private:
     void ProcessButtonSix();
     void ProcessButtonSeven();
 
-    void SynchronizeTheFeeder();
+    bool SynchronizeFeeder();
+    void SyncOn();
     void SyncOff();
 
     void MotorStart();
     void MotorStop();
     void FeederStart();
     void FeederStop();
+    void MotorFeederStart();
+    void MotorFeederStop();
 
     void StartStop();
-    void StartStopFeederSync();
+    void StartStopSync();
 
     void SpeedUp();
     void SpeedDown();
@@ -123,6 +126,7 @@ private:
     bool true_feeder_pos_flag_{true};
     bool home_pos_flag_{false};
     bool sync_flag_{false};
+    bool display_update_flag_{false};
 };
 
 #endif //WINDING_MACHINE_HPP

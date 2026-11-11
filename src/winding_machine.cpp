@@ -80,7 +80,10 @@ bool WindingMachine::WindingMachineInit(){
                  CalcFeederPosition(current_feeder_counts)
                  );
     }
-    display_turns_=flash_data_ctrl_->GetFlashCurrentTurns();
+
+    auto current_flash_turns_scaled = flash_data_ctrl_->GetFlashCurrentTurnsScaled();
+    auto scale = flash_data_ctrl_->GetScale();
+    display_turns_=static_cast<std::uint16_t>(current_flash_turns_scaled/scale);
 
     auto feeder_pos = CalcFeederPosition(static_cast<std::int32_t>(current_flash_feeder_counts));
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/100);
@@ -129,13 +132,13 @@ void WindingMachine::DisplayMainPage()const{
     DisplayFeederState();
     DisplayFeederPosition();
 
-    ST7789_draw_string(display_, 5, 130, BLACK, fnt20x12, "sync:");
+    ST7789_draw_string(display_, 5, 190, BLACK, fnt20x12, "sync:");
     DisplaySyncState();
 
     ST7789_draw_string(display_, 5, 170, BLACK, fnt20x12, "fn:");
     DisplayFuncButton();
 
-    ST7789_draw_string(display_, 5, 190, BLACK, fnt20x12, "max_fpos:");
+    ST7789_draw_string(display_, 5, 130, BLACK, fnt20x12, "max_fpos:");
     DisplayMaxFeederPos();
 }
 
@@ -174,7 +177,7 @@ void WindingMachine::DisplayCurrentSpeed()const{
 
 void WindingMachine::DisplayKp()const{
     PixelCoord left_top = {199, 10};
-    PixelCoord right_bottom = {240, 25};
+    PixelCoord right_bottom = {239, 25};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     auto Kp = flash_data_ctrl_->GetKpScaled();
@@ -185,7 +188,7 @@ void WindingMachine::DisplayKp()const{
 
 void WindingMachine::DisplayKi()const{
     PixelCoord left_top = {199, 30};
-    PixelCoord right_bottom = {240, 45};
+    PixelCoord right_bottom = {239, 45};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     auto Ki = flash_data_ctrl_->GetKiScaled();
@@ -196,7 +199,7 @@ void WindingMachine::DisplayKi()const{
 
 void WindingMachine::DisplayKd()const{
     PixelCoord left_top = {199, 50};
-    PixelCoord right_bottom = {240, 65};
+    PixelCoord right_bottom = {239, 65};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     auto Kd = flash_data_ctrl_->GetKdScaled();
@@ -207,7 +210,7 @@ void WindingMachine::DisplayKd()const{
 
 void WindingMachine::DisplayWireDiameter()const{
     PixelCoord left_top = {199, 70};
-    PixelCoord right_bottom = {240, 85};
+    PixelCoord right_bottom = {239, 85};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     char buffer[6];
@@ -292,12 +295,13 @@ void WindingMachine::DisplayFeederState()const{
 }
 
 void WindingMachine::DisplaySyncState()const{
-    PixelCoord left_top = {109, 130};
-    PixelCoord right_bottom = {150, 145};
+    PixelCoord left_top = {79, 189};
+    PixelCoord right_bottom = {120, 205};
+
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     const char* value = static_cast<bool>(sync_button_) ? "ON" : "OFF";
-    ST7789_draw_string(display_, 110, 130, BLACK, fnt20x12, value);
+    ST7789_draw_string(display_, 80, 190, BLACK, fnt20x12, value);
 }
 
 void WindingMachine::DisplayFuncButton()const{
@@ -311,19 +315,20 @@ void WindingMachine::DisplayFuncButton()const{
 }
 
 void WindingMachine::DisplayMaxFeederPos()const{
-    PixelCoord left_top = {160, 189};
-    PixelCoord right_bottom = {240, 215};
+    PixelCoord left_top = {189, 130};
+    PixelCoord right_bottom = {239, 145};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     char buffer[6];
     auto max_feeder_pos = flash_data_ctrl_->GetMaxFlashFeederPosScaled();
-    snprintf(buffer, sizeof(buffer), "%u", max_feeder_pos);
-    ST7789_draw_string(display_, 160, 190, BLACK, fnt20x12, buffer);
+    auto scale = flash_data_ctrl_->GetScale();
+    snprintf(buffer, sizeof(buffer), "%u", max_feeder_pos/scale);
+    ST7789_draw_string(display_, 190, 130, BLACK, fnt20x12, buffer);
 }
 
 void WindingMachine::DisplayBobbinRPM()const{
-    PixelCoord left_top = {199, 90};
-    PixelCoord right_bottom = {240, 105};
+    PixelCoord left_top = {189, 90};
+    PixelCoord right_bottom = {239, 105};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     char buffer[6];
@@ -332,17 +337,17 @@ void WindingMachine::DisplayBobbinRPM()const{
     }else{
         snprintf(buffer, sizeof(buffer), "%u", display_bobbin_rpm_);
     }
-    ST7789_draw_string(display_, 200, 90, PURPLE, fnt20x12, buffer);
+    ST7789_draw_string(display_, 190, 90, PURPLE, fnt20x12, buffer);
 }
 
 void WindingMachine::DisplayFeederPosition()const{
-    PixelCoord left_top = {199, 110};
-    PixelCoord right_bottom = {240, 125};
+    PixelCoord left_top = {189, 110};
+    PixelCoord right_bottom = {239, 125};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     char buffer[6];
     snprintf(buffer, sizeof(buffer), "%u", display_feeder_pos_);
-    ST7789_draw_string(display_, 200, 110, PURPLE, fnt20x12, buffer);
+    ST7789_draw_string(display_, 190, 110, PURPLE, fnt20x12, buffer);
 }
 
 void WindingMachine::ProcessButtons(uint8_t button){
@@ -375,16 +380,9 @@ void WindingMachine::ProcessButtonOne(){
             if(sync_button_==Sync::Off){
                 StartStop();
             }
-            else if(true_feeder_pos_flag_){
-                StartStopFeederSync();
-                DisplayFeederState();
-                DisplayFeederPosition();
-                DisplayFeederDirection();
+            else{
+                StartStopSync();
             }
-            DisplayMotorState();
-            DisplayBobbinRPM();
-            DisplayMotorDirection();
-            DisplayCurrentSpeed();
             break;
 
         case Function::On:
@@ -393,45 +391,37 @@ void WindingMachine::ProcessButtonOne(){
             }
             if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
                 feeder_driver_->SetDirection(Direction::Forward);
+                DisplayFeederDirection();
                 encoder_ctrl_->ResetFeederCounts();
             }
             if(feeder_driver_->GetState()==MotorState::Idle){
                 feeder_driver_->SetSpeed(feeder_driver_->GetMaxSpeed());
-                feeder_driver_->Start();
-                sync_flag_=false;
+                FeederStart();
             }else{
-                feeder_driver_->Stop();
+                FeederStop();
             }
-            DisplayFeederState();
-            DisplayFeederPosition();
-            DisplayFeederDirection();
             break;
     }
-        motor_log_cnt_=0;
-        feeder_log_cnt_=10;
+    motor_log_cnt_=0;
+    feeder_log_cnt_=10;
 }
 
 void WindingMachine::StartStop(){
     if(motor_driver_->GetState()==MotorState::Idle){
-        motor_driver_->Start();
+        MotorStart();
     }else{
-        motor_driver_->Stop();
+        MotorStop();
     }
 }
 
-void WindingMachine::StartStopFeederSync(){
+void WindingMachine::StartStopSync(){
+
     if(motor_driver_->GetState()==MotorState::Idle){
         motor_driver_->SetDirection(Direction::Forward);
-        if(!sync_flag_){
-            SynchronizeTheFeeder();
-        }
-        motor_driver_->SetSpeed(motor_driver_->GetMinSpeed()+MOTOR_SPEED_STEP);
-        feeder_driver_->SetSpeed(MOTOR_SPEED_STEP);
-        motor_driver_->Start();
-        feeder_driver_->Start();
+        DisplayMotorDirection();
+        MotorFeederStart();
     }else{
-        StopMachine();
-        UpdateDisplayAfterStop();
+        MotorFeederStop();
         last_feeder_pos_correction_time_=0;
     }
 }
@@ -528,18 +518,12 @@ void WindingMachine::ProcessButtonFour(){
     UpdateDisplayAfterStop();
 
     switch(func_button_){
-        case Function::Off:        
-            (sync_button_==Sync::Off) ? sync_button_=Sync::On : sync_button_=Sync::Off;
-            DisplaySyncState();
-            if(sync_button_==Sync::On){
-                SynchronizeTheFeeder();
-                if(sync_flag_){
-                    LED_On();
-                }
+        case Function::Off:
+            if(sync_button_==Sync::Off){
+                (SynchronizeFeeder()) ? SyncOn() : SyncOff();
             }else{
                 SyncOff();
-            }            
-            DisplaySyncState();
+            }
             break;
         case Function::On:
             auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
@@ -547,7 +531,7 @@ void WindingMachine::ProcessButtonFour(){
             flash_data_ctrl_->SetFlashFeederCounts(static_cast<uint16_t>(flash_data));
 
             encoder_ctrl_->UpdateTurnNumber();
-            flash_data_ctrl_->SetFlashCurrentTurns(encoder_ctrl_->GetTurnNumber());
+            flash_data_ctrl_->SetFlashCurrentTurnsScaled(encoder_ctrl_->GetTurnNumberScaled());
 
             flash_data_ctrl_->WriteFlashData();
             break;
@@ -561,10 +545,7 @@ void WindingMachine::ProcessButtonFive(){
 
     StopMachine();
     UpdateDisplayAfterStop();
-
-    if(sync_button_==Sync::On){
-        SyncOff();
-    }
+    SyncOff();
 
     switch(func_button_){        
         case Function::Off:{
@@ -610,16 +591,18 @@ void WindingMachine::UpdateMotorFlashData(){
     auto bobbin_rpm = encoder_ctrl_->GetBobbinRPM();
     display_bobbin_rpm_=bobbin_rpm;
 
-    auto current_turns = encoder_ctrl_->GetTurnNumber();
-    auto total_turns = flash_data_ctrl_->GetFlashTotalTurns();
+    auto current_turns = static_cast<std::uint32_t>(encoder_ctrl_->GetTurnNumber());
+    auto total_turns = static_cast<std::uint32_t>(flash_data_ctrl_->GetFlashTotalTurns());
     if(current_turns > total_turns && motor_driver_->GetDirection()==Direction::Forward){
         StopMachine();
         UpdateDisplayAfterStop();
         LOG_INFO("Bobbin is FULL");
+        return;
     }
     display_turns_=current_turns;
-    flash_data_ctrl_->SetFlashCurrentTurns(current_turns);
+    flash_data_ctrl_->SetFlashCurrentTurnsScaled(current_turns);
 
+    //for logger
     if(motor_log_cnt_==20){
         LOG_INFO("turns_pos=%d", GetTurnPosition());
         motor_log_cnt_=0;
@@ -648,16 +631,24 @@ void WindingMachine::UpdateFeederFlashData(){
 }
 
 void WindingMachine::UpdateDisplayAfterStop(){
+
+    if(display_update_flag_){
+        return;
+    }
+
     DisplayMotorState();
     DisplayFeederState();
+
     DisplayMotorDirection();
     DisplayFeederDirection();
+
+    DisplayBobbinRPM();
+    DisplayFeederPosition();
 
     UpdateMotorFlashData();
     UpdateFeederFlashData();
 
-    DisplayBobbinRPM();
-    DisplayFeederPosition();
+    display_update_flag_=true;
 }
 
 void WindingMachine::StopMachine(){
@@ -671,8 +662,8 @@ std::uint16_t WindingMachine::GetTurnPosition()const{
 
     auto current_turns_scaled = encoder_ctrl_->GetTurnNumberScaled();
     auto wire_diam = flash_data_ctrl_->GetScaledFlashWireDiam();
-    auto scale = flash_data_ctrl_->GetScaleOfWireDiam();
-    auto wire_glob_pos_scaled = static_cast<std::uint32_t>(wire_diam) * current_turns_scaled / scale;
+    auto scale = flash_data_ctrl_->GetScale();
+    std::uint32_t wire_glob_pos_scaled = wire_diam * current_turns_scaled / scale;
 
     auto pos_in_layer = static_cast<std::uint16_t>(wire_glob_pos_scaled % flash_data_ctrl_->GetMaxFlashFeederPosScaled());
 
@@ -689,16 +680,16 @@ std::uint16_t WindingMachine::CalcFeederPosition(std::int32_t counts){
     return static_cast<std::uint16_t>(feeder_pos);
 }
 
-void WindingMachine::SynchronizeTheFeeder(){
+bool WindingMachine::SynchronizeFeeder(){
 
     if(!true_feeder_pos_flag_){
         LOG_INFO("FEEDER POSITION WRONG");
-        return;
+        return false;
     }
 
     if(sync_flag_){
         LOG_INFO("SYNCHRONIZATION DONE");
-        return;
+        return true;
     }
 
     auto pos_in_layer = GetTurnPosition();
@@ -711,60 +702,57 @@ void WindingMachine::SynchronizeTheFeeder(){
     auto abs_error = (error>0) ? error : -error;
     if(abs_error < max_error){
         LOG_INFO("SYNCHRONIZATION DONE, error=%d", abs_error);
-        return;
+        return true;
     }
 
     if(error>0){
         feeder_driver_->SetDirection(Direction::Forward);
+        DisplayFeederDirection();
     }else{
         feeder_driver_->SetDirection(Direction::Reverse);
+        DisplayFeederDirection();
         __HAL_GPIO_EXTI_CLEAR_IT(HOME_POS_PIN);
         HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
         error=-error;
     }
 
     feeder_driver_->SetSpeed(feeder_driver_->GetMaxSpeed());
-    feeder_driver_->Start();
-    DisplayFeederState();
-    DisplayFeederDirection();
+    FeederStart();
 
     auto timeout = HAL_GetTick();
-    std::int32_t error_last = error;
+    std::int32_t error_last = abs_error;
     while(error > max_error){
 
         feeder_pos = CalcFeederPosition(encoder_ctrl_->GetFeederCounts());
         error = pos_in_layer - feeder_pos;
         error = (error>0) ? error : -error;
 
-        if(error_last > error){
+        if(error <= error_last){
             error_last = error;
         }else{
             FeederStop();
-            SyncOff();
             LOG_INFO("Sync STOPPED: error increased");
-            return;
+            return false;
         }
 
         button_ctrl_->ScanButtons();
         if(button_ctrl_->GetPushedButton()==START_STOP){
             FeederStop();
-            SyncOff();
             LOG_INFO("Sync STOPPED: pushed button stop");
-            return;
+            return false;
         }
 
         if(HAL_GetTick()-timeout > 10000){
             FeederStop();
-            LOG_INFO("SynchronizeTheFeeder TIMEOUT");
+            LOG_INFO("SynchronizeFeeder TIMEOUT");
             SyncOff();
-            return;
+            return false;
         }
     }
-
     FeederStop();
-    sync_flag_=true;
     LOG_INFO("SYNCHRONIZATION DONE");
     LOG_INFO("Sync_Stop: TurnPos=%d, FeederPos=%d", pos_in_layer, feeder_pos);
+    return true;
 }
 
 void WindingMachine::CorrectFeederPos(){
@@ -846,6 +834,13 @@ bool WindingMachine::GetHomeFlag()const{
     return home_pos_flag_;
 }
 
+void WindingMachine::SyncOn(){
+    sync_flag_=true;
+    sync_button_ = Sync::On;
+    DisplaySyncState();
+    LED_On();
+}
+
 void WindingMachine::SyncOff(){
     sync_flag_=false;
     sync_button_ = Sync::Off;
@@ -853,33 +848,66 @@ void WindingMachine::SyncOff(){
     LED_Off();
 }
 
-void WindingMachine::FeederStart(){
+void WindingMachine::FeederStart(){    
     feeder_driver_->Start();
+
     DisplayFeederState();
-    DisplayFeederDirection();
+
+    SyncOff();
+    display_update_flag_=false;
 }
 
 void WindingMachine::FeederStop(){
     feeder_driver_->Stop();
-    UpdateFeederFlashData();
+
+    DisplayFeederState();
     DisplayFeederPosition();
-    DisplayFeederDirection();
 
     UpdateFeederFlashData();
-    DisplayFeederPosition();
 }
 
 void WindingMachine::MotorStart(){
     motor_driver_->Start();
+
     DisplayMotorState();
-    DisplayMotorDirection();
+
+    SyncOff();
+    display_update_flag_=false;
 }
 
 void WindingMachine::MotorStop(){
     motor_driver_->Stop();
+
     DisplayMotorState();
-    DisplayMotorDirection();
+    DisplayBobbinRPM();
+
+    UpdateMotorFlashData();    
+}
+
+void WindingMachine::MotorFeederStart(){
+
+    if(!sync_flag_){
+        return;
+    }
+    motor_driver_->Start();
+    feeder_driver_->Start();
+
+    DisplayMotorState();
+    DisplayFeederState();
+
+    display_update_flag_=false;
+}
+
+void WindingMachine::MotorFeederStop(){
+    feeder_driver_->Stop();
+    motor_driver_->Stop();
+
+    DisplayMotorState();
+    DisplayFeederState();
+
+    DisplayFeederPosition();
+    DisplayBobbinRPM();
 
     UpdateMotorFlashData();
-    DisplayBobbinRPM();
+    UpdateFeederFlashData();
 }
