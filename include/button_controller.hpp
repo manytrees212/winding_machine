@@ -13,10 +13,15 @@
 #define FWD_REV     5
 #define FUNC        6
 
-class ButtonController{
+class ButtonController final{
 public:
     ButtonController()=default;
     ~ButtonController()=default;
+
+    ButtonController(const ButtonController&)=delete;
+    ButtonController& operator=(const ButtonController&)=delete;
+    ButtonController(ButtonController&&)=delete;
+    ButtonController& operator=(ButtonController&&)=delete;
 
     void ScanButtons();
     void ResetPushedButton();
@@ -37,8 +42,6 @@ private:
     std::uint8_t pushed_counter_[ROWS][COLS] = {{0,0,0},{0,0,0}};
     bool last_stable_state_[ROWS][COLS] = {{LOW, LOW, LOW},{LOW, LOW, LOW}};
     volatile std::uint8_t pushed_button_ = 0;
-
-
 };
 
 #endif //BUTTON_CONTROLLER_HPP

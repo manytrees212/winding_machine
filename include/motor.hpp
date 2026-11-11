@@ -17,7 +17,7 @@ template <typename T>
 struct has_enable_pins<T, std::void_t<decltype(T::ENABLE_PORT_L)>> : std::true_type {};
 
 template <typename Config>
-class MotorDriver{
+class MotorDriver final{
 public:
     MotorDriver(){
         if constexpr (Config::IS_COMPLEMENTARY) {
@@ -32,7 +32,21 @@ public:
         EnableMotor(false);
         static_assert(Config::MAX_SPEED > 0, "MAX_SPEED must be greater than 0");
     }
-    ~MotorDriver()=default;
+    ~MotorDriver(){
+        Stop();
+        if constexpr (Config::IS_COMPLEMENTARY) {
+            HAL_TIMEx_PWMN_Stop(Config::TIMER, Config::TIMER_CHANNEL_FWD);
+            HAL_TIMEx_PWMN_Stop(Config::TIMER, Config::TIMER_CHANNEL_REV);
+        } else {
+            HAL_TIM_PWM_Stop(Config::TIMER, Config::TIMER_CHANNEL_FWD);
+            HAL_TIM_PWM_Stop(Config::TIMER, Config::TIMER_CHANNEL_REV);
+        }
+    }
+
+    MotorDriver(const MotorDriver&) = delete;
+    MotorDriver& operator=(const MotorDriver&) = delete;
+    MotorDriver(MotorDriver&&) = delete;
+    MotorDriver& operator=(MotorDriver&&) = delete;
 
     void Start(){
         if(state_==MotorState::Running) {return;}
@@ -91,7 +105,7 @@ private:
             } else if constexpr (Config::TIMER_PERIOD == 2047) {
                 compare = static_cast<uint32_t>(speed) << 3; // Fast multiply by 8
             } else {
-                compare = (static_cast<uint32_t>(speed) * Config::TIMER->Init.Period) / MotorConfig::MAX_SPEED;
+                compare = (static_cast<uint32_t>(speed) * Config::TIMER->Init.Period) / Config::MAX_SPEED;
             }
         }
 

@@ -43,7 +43,7 @@ void UartCmdParser::UpdateCmd(){
     }
 }
 
-const UartCommand UartCmdParser::GetUartCmd(){
+UartCommand UartCmdParser::GetUartCmd(){
     if (uart_cmd_ready_) {
         uart_cmd_ready_ = false;
         return uart_cmd_t_;

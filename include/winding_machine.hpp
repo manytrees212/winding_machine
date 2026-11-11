@@ -15,7 +15,7 @@
 enum class Function {Off, On};
 enum class Sync {Off, On};
 
-class WindingMachine{
+class WindingMachine final{
 public:
     WindingMachine()=delete;
     WindingMachine(ST7789_display* display,
@@ -27,6 +27,11 @@ public:
                    ButtonController* button_ctrl);
 
     ~WindingMachine()=default;
+
+    WindingMachine(const WindingMachine&)=delete;
+    WindingMachine& operator=(const WindingMachine&)=delete;
+    WindingMachine(WindingMachine&&)=delete;
+    WindingMachine& operator=(WindingMachine&&)=delete;
 
 public:
     bool WindingMachineInit();
