@@ -4,6 +4,7 @@
 #include <logger.h>
 #include <logger_with_hal.h>
 #include <error_handler.h>
+#include <pid.hpp>
 
 #include "main.hpp"
 #include "project_config.hpp"
@@ -18,12 +19,12 @@
 #include "display_st7789.h"
 #include "motor.hpp"
 #include "encoder.hpp"
-#include "pid.hpp"
 #include "uart_cmd_parser.hpp"
 #include "winding_machine.hpp"
 
 extern "C" const uint16_t VirtAddVarTab[NB_OF_VAR] = {/*defenition for eeprom*/
-    VAR_CURRENT_TURNS,
+    VAR_CURRENT_TURNS_1,
+    VAR_CURRENT_TURNS_2,
     VAR_TOTAL_TURNS,
     VAR_FEEDER_COUNTS,
     VAR_MAX_FEEDER_COUNTS,
@@ -53,18 +54,18 @@ int main(){
     Chip_Init();
 
     static ProjectConfig config;
-    EEPROM_Data_Init(&VirtAddVarTab[0], config);
+    EEPROM_Data_Init(VirtAddVarTab, config);
 
-    static FlashDataController flash_data_controller(&config, &VirtAddVarTab[0]);
+    static FlashDataController flash_data_controller(&config, VirtAddVarTab);
     if (config.need_write == 1) {
         flash_data_controller.WriteFlashData();
     }
-    LOG_INFO("Configuration EEPROM:\
-                current_turns=%d,\
+    LOG_INFO("1.Configuration EEPROM:\
+                current_turns_scaled=%d,\
                 total_turns=%d,\
                 feeder_counts=%d,\
                 max_feeder_counts=%d",
-                flash_data_controller.GetFlashCurrentTurns(),
+                flash_data_controller.GetFlashCurrentTurnsScaled(),
                 flash_data_controller.GetFlashTotalTurns(),
                 flash_data_controller.GetFlashFeederCounts(),
                 flash_data_controller.GetMaxFlashFeederCounts()
@@ -83,25 +84,32 @@ int main(){
     if(ST7789_init(&disp_st7789, &hw)!=Disp_st7789_OK){
         LOG_ERROR("Display ST7789 Init() FAILED");
     }else{
-        LOG_INFO("Display ST7789 READY");
+        LOG_INFO("2.Display ST7789 READY");
     }
 
+    PID pid(flash_data_controller.GetKpScaled(),
+            flash_data_controller.GetKiScaled(),
+            flash_data_controller.GetKdScaled(),
+            0,
+            100);
+    LOG_INFO("3.PID READY");
+
+    UartCmdParser uart_cmd_parser;
+    LOG_INFO("4.UART_parser READY");
+
     static ButtonController button_controller;
+    LOG_INFO("5.Button_ctrl READY");
 
     static MotorDriver<BTS7960ConfigMotor> motor;
+    LOG_INFO("6.Motor_driver READY");
+
     static MotorDriver<BTS7960ConfigFeeder> feeder;
+    LOG_INFO("7.Feeder_driver READY");
 
     static EncoderController encoder_ctrl(&htim2,
                                           &htim3,
-                                          flash_data_controller.GetFlashCurrentTurns());
-
-    static PID pid(flash_data_controller.GetKpScaled(),
-                   flash_data_controller.GetKiScaled(),
-                   flash_data_controller.GetKdScaled(),
-                   0,
-                   100);
-
-    static UartCmdParser uart_cmd_parser;
+                                          flash_data_controller.GetFlashCurrentTurnsScaled());
+    LOG_INFO("8.Encoder_ctrl READY");
 
     static WindingMachine winding_machine(&disp_st7789,
                                    &flash_data_controller,
@@ -112,6 +120,12 @@ int main(){
                                    &button_controller);
     machine_ptr=&winding_machine;
 
+    if(!winding_machine.WindingMachineInit()){
+        LOG_ERROR("WindingMachineInit fail");
+        Error_Handler();
+    }
+    LOG_INFO("9.WM READY");
+
     /*to prevent extra display updating*/
     auto last_bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
     auto last_speed = winding_machine.GetDisplaySpeed();
@@ -119,6 +133,8 @@ int main(){
     auto last_feeder_pos = winding_machine.CalcFeederPosition(encoder_ctrl.GetFeederCounts());
 
     std::uint32_t last_ms = HAL_GetTick();
+
+    LOG_INFO("10.Main Loop start");
 
     while(1){
         //process home position
@@ -143,10 +159,9 @@ int main(){
                      flash_data_controller.GetFlashFeederCounts(),
                      winding_machine.CalcFeederPosition(current_feeder_counts));
 
-            winding_machine.DisplayFeederPosition();
-
             feeder.SetDirection(Direction::Forward);
             winding_machine.DisplayFeederDirection();
+            winding_machine.UpdateDisplayAfterStop();
         }
 
         //scan and process buttons
@@ -200,29 +215,25 @@ int main(){
 
         auto now_ms=HAL_GetTick();
         if((now_ms-last_ms) > 1000){/*update display 1000 ms*/
-            if(is_motor){
-                auto bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
-                auto turns = winding_machine.GetDisplayTurns();
-                auto speed = winding_machine.GetDisplaySpeed();
-                if(last_bobbin_rpm != bobbin_rpm){
-                    winding_machine.DisplayBobbinRPM();
-                    last_bobbin_rpm=bobbin_rpm;
-                }
-                if(turns != last_turn){
-                    winding_machine.DisplayCurrentTurns();
-                    last_turn=turns;
-                }
-                if(speed != last_speed){
-                    winding_machine.DisplayCurrentSpeed();
-                    last_speed=speed;
-                }
+            auto bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
+            auto turns = winding_machine.GetDisplayTurns();
+            auto speed = winding_machine.GetDisplaySpeed();
+            auto feeder_pos = winding_machine.GetDisplayFeederPos();
+            if(last_bobbin_rpm != bobbin_rpm){
+                winding_machine.DisplayBobbinRPM();
+                last_bobbin_rpm=bobbin_rpm;
             }
-            if(is_feeder){
-                auto feeder_pos = winding_machine.GetDisplayFeederPos();
-                if(feeder_pos != last_feeder_pos){
-                    winding_machine.DisplayFeederPosition();
-                    last_feeder_pos=feeder_pos;
-                }
+            if(turns != last_turn){
+                winding_machine.DisplayCurrentTurns();
+                last_turn=turns;
+            }
+            if(speed != last_speed){
+                winding_machine.DisplayCurrentSpeed();
+                last_speed=speed;
+            }
+            if(feeder_pos != last_feeder_pos){
+                winding_machine.DisplayFeederPosition();
+                last_feeder_pos=feeder_pos;
             }
             last_ms=now_ms;
         }

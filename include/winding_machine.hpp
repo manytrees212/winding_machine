@@ -2,13 +2,14 @@
 #define WINDING_MACHINE_HPP
 
 #include <cstdint>
+#include <pid.hpp>
+
 #include "motor.hpp"
 #include <st7789.h>
 #include "display_st7789.h"
 #include "flash_data_controller.hpp"
 #include "motor.hpp"
 #include "encoder.hpp"
-#include "pid.hpp"
 #include "button_controller.hpp"
 
 enum class Function {Off, On};
@@ -28,6 +29,7 @@ public:
     ~WindingMachine()=default;
 
 public:
+    bool WindingMachineInit();
     void ProcessButtons(uint8_t button);
     void UpdateMotorFlashData();
     void UpdateFeederFlashData();
@@ -45,6 +47,7 @@ public:
     std::uint16_t GetTurnPosition()const;
 
     void StopMachine();
+    void UpdateDisplayAfterStop();
 
     void DisplayCurrentTurns()const;
     void DisplayTotalTurns()const;
@@ -79,10 +82,19 @@ private:
     void ProcessButtonSix();
     void ProcessButtonSeven();
 
-    void SynchronizeTheFeeder();
+    bool SynchronizeFeeder();
+    void SyncOn();
+    void SyncOff();
+
+    void MotorStart();
+    void MotorStop();
+    void FeederStart();
+    void FeederStop();
+    void MotorFeederStart();
+    void MotorFeederStop();
 
     void StartStop();
-    void StartStopFeederSync();
+    void StartStopSync();
 
     void SpeedUp();
     void SpeedDown();
@@ -114,6 +126,7 @@ private:
     bool true_feeder_pos_flag_{true};
     bool home_pos_flag_{false};
     bool sync_flag_{false};
+    bool display_update_flag_{false};
 };
 
 #endif //WINDING_MACHINE_HPP
