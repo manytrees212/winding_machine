@@ -4,6 +4,10 @@ project(winding_machine C CXX ASM)
 option(BUILD_WM_PROJECT OFF)
 option(BUILD_U_TESTS OFF)
 
+if(BUILD_WM_PROJECT AND BUILD_U_TESTS)
+    message(FATAL_ERROR "Cannot enable both BUILD_WM_PROJECT and BUILD_U_TESTS at the same time.")
+endif()
+
 set(PROJECT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(BUILD_WM_PROJECT)

@@ -56,6 +56,7 @@ public:
     std::int32_t GetTurnNumber()const;
     std::uint32_t GetTurnNumberScaled()const;
     std::uint32_t GetLastTurnNumberScaled()const;
+    std::uint16_t GetDeltaCounts()const;
 
     std::uint16_t GetMotorCounts()const;
     std::int32_t GetFeederCounts();
@@ -87,15 +88,15 @@ private:
     Encoder motor_encoder_;
     Encoder feeder_encoder_;
     std::int32_t  turn_number_scaled_;
+    std::int32_t  last_turn_number_scaled_ = 0;
 
     std::uint32_t last_motor_update_time_{0};
     std::uint32_t last_feeder_update_time_{0};
+
     std::int32_t extended_feeder_counts_{0};
     std::uint32_t last_feeder_counts_{0};
-    std::uint32_t last_update_feeder_counts_{0};
 
-    std::int32_t  last_turn_number_scaled_ = 0;
-    std::int16_t  motor_counts_per_update_= 0;
+    std::int16_t  motor_counts_delta_= 0;
     std::uint16_t bobbin_rpm_scaled_ = 0;
 
     bool motor_encoder_has_updated_{false};

@@ -53,8 +53,8 @@ bool WindingMachine::WindingMachineInit(){
         return false;
     }
 
-    auto current_flash_feeder_counts = flash_data_ctrl_->GetFlashFeederCounts();
-    if(current_flash_feeder_counts==0){
+    auto flash_feeder_counts = flash_data_ctrl_->GetFlashFeederCounts();
+    if(flash_feeder_counts==0){
         if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)!=GPIO_PIN_RESET){
             LOG_INFO("WM init: WRONG FEEDER POS");
             ResetTrueFeederPosFlag();
@@ -65,28 +65,29 @@ bool WindingMachine::WindingMachineInit(){
         if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET){
             LOG_INFO("WM init: RESET FEEDER COUNT");
             flash_data_ctrl_->SetFlashFeederCounts(0);
-            current_flash_feeder_counts=0;
+            flash_feeder_counts=0;
         }
     }
 
     if(true_feeder_pos_flag_){
         encoder_ctrl_->ResetFeederCounts();/*to clean timer*/
-        encoder_ctrl_->SetFeederCounts(current_flash_feeder_counts);
-        auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
-        LOG_INFO("WM init: turns_number=%d, turn_pos=%d, feeder_cnt=%d, feeder_pos=%d",
-                 encoder_ctrl_->GetTurnNumberScaled(),
-                 GetTurnPosition(),
-                 current_feeder_counts,
-                 CalcFeederPosition(current_feeder_counts)
+        encoder_ctrl_->SetFeederCounts(flash_feeder_counts);
+
+        auto feeder_pos = CalcFeederPositionScaled(static_cast<std::int32_t>(flash_feeder_counts));
+        auto scale = encoder_ctrl_->GetScaleFactorTurns();
+        display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/scale);
+
+        LOG_INFO("WM init: turn_pos=%d, feeder_pos=%d",
+                 CalcTurnPositionScaled(),
+                 CalcFeederPositionScaled(encoder_ctrl_->GetFeederCounts())
                  );
     }
 
-    auto current_flash_turns_scaled = flash_data_ctrl_->GetFlashCurrentTurnsScaled();
-    auto scale = flash_data_ctrl_->GetScale();
-    display_turns_=static_cast<std::uint16_t>(current_flash_turns_scaled/scale);
+    auto flash_current_turns_scaled = flash_data_ctrl_->GetFlashCurrentTurnsScaled();
+    display_turns_=static_cast<std::uint16_t>(flash_current_turns_scaled/flash_data_ctrl_->GetScale());
 
-    auto feeder_pos = CalcFeederPosition(static_cast<std::int32_t>(current_flash_feeder_counts));
-    display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/100);
+    base_layer_turns_scaled_=flash_data_ctrl_->GetFlashBaseLayerTurnsScaled();
+    display_turn_pos_=CalcTurnPositionScaled()/encoder_ctrl_->GetScaleFactorTurns();
 
     DisplayMainPage();
     LOG_INFO("WM init: true_feeder_flag=%d, home_flag=%d, sync_flag=%d",
@@ -138,8 +139,8 @@ void WindingMachine::DisplayMainPage()const{
     ST7789_draw_string(display_, 5, 170, BLACK, fnt20x12, "fn:");
     DisplayFuncButton();
 
-    ST7789_draw_string(display_, 5, 130, BLACK, fnt20x12, "max_fpos:");
-    DisplayMaxFeederPos();
+    ST7789_draw_string(display_, 5, 130, BLACK, fnt20x12, "base_pos:");
+    DisplayTurnPos();
 }
 
 void WindingMachine::DisplayCurrentTurns()const{
@@ -314,15 +315,13 @@ void WindingMachine::DisplayFuncButton()const{
     ST7789_draw_string(display_, 50, 170, BLACK, fnt20x12, value);
 }
 
-void WindingMachine::DisplayMaxFeederPos()const{
+void WindingMachine::DisplayTurnPos()const{
     PixelCoord left_top = {189, 130};
     PixelCoord right_bottom = {239, 145};
     ST7789_draw_rectangle(display_, left_top, right_bottom, WHITE);
 
     char buffer[6];
-    auto max_feeder_pos = flash_data_ctrl_->GetMaxFlashFeederPosScaled();
-    auto scale = flash_data_ctrl_->GetScale();
-    snprintf(buffer, sizeof(buffer), "%u", max_feeder_pos/scale);
+    snprintf(buffer, sizeof(buffer), "%u", display_turn_pos_);
     ST7789_draw_string(display_, 190, 130, BLACK, fnt20x12, buffer);
 }
 
@@ -435,17 +434,9 @@ void WindingMachine::ProcessButtonTwo(){
 
         case Function::Off:{
             SpeedDown();
-            DisplayCurrentSpeed();
             return;
         }
-        case Function::On:{
-            auto current_feeder_counts = encoder_ctrl_->GetFeederCounts();
-            if(current_feeder_counts>0){
-                flash_data_ctrl_->SetMaxFlashFeederCounts(static_cast<std::uint16_t>(current_feeder_counts));
-                DisplayMaxFeederPos();
-                return;
-            }
-        }
+        case Function::On: return;
     }
 }
 
@@ -475,7 +466,6 @@ void WindingMachine::ProcessButtonThree(){
     switch(func_button_){
         case Function::Off:{
             SpeedUp();
-            DisplayCurrentSpeed();
             return;
         }
         case Function::On:{
@@ -520,7 +510,16 @@ void WindingMachine::ProcessButtonFour(){
     switch(func_button_){
         case Function::Off:
             if(sync_button_==Sync::Off){
+
                 (SynchronizeFeeder()) ? SyncOn() : SyncOff();
+
+                if(sync_flag_){
+                    auto motor_dir = motor_driver_->GetDirection();
+                    if(motor_dir!=Direction::Forward){
+                        motor_driver_->SetDirection(Direction::Forward);
+                        DisplayMotorDirection();
+                    }
+                }
             }else{
                 SyncOff();
             }
@@ -530,12 +529,35 @@ void WindingMachine::ProcessButtonFour(){
             auto flash_data = (current_feeder_counts<0) ? 0 : current_feeder_counts;
             flash_data_ctrl_->SetFlashFeederCounts(static_cast<uint16_t>(flash_data));
 
-            encoder_ctrl_->UpdateTurnNumber();
+            encoder_ctrl_->UpdateTurnNumber();            
             flash_data_ctrl_->SetFlashCurrentTurnsScaled(encoder_ctrl_->GetTurnNumberScaled());
+
+            UpdateBaseLayerTurns(encoder_ctrl_->GetDeltaCounts());
+            flash_data_ctrl_->SetFlashBaseLayerTurnsScaled(static_cast<uint16_t>(base_layer_turns_scaled_));
 
             flash_data_ctrl_->WriteFlashData();
             break;
     }
+}
+
+void WindingMachine::MotorChangeDirection(){
+    auto motor_dir = motor_driver_->GetDirection();
+    (motor_dir==Direction::Forward) ?
+        motor_driver_->SetDirection(Direction::Reverse) : motor_driver_->SetDirection(Direction::Forward);
+    DisplayMotorDirection();
+}
+
+void WindingMachine::FeederChangeDirection(){
+
+    auto feeder_dir = feeder_driver_->GetDirection();
+
+    if(HAL_GPIO_ReadPin(GPIOB, HOME_POS_PIN)==GPIO_PIN_RESET && feeder_dir==Direction::Forward){
+        return;
+    }
+
+    (feeder_dir==Direction::Forward) ?
+        feeder_driver_->SetDirection(Direction::Reverse) : feeder_driver_->SetDirection(Direction::Forward);
+    DisplayFeederDirection();
 }
 
 /*=============*/
@@ -545,21 +567,19 @@ void WindingMachine::ProcessButtonFive(){
 
     StopMachine();
     UpdateDisplayAfterStop();
-    SyncOff();
 
     switch(func_button_){        
         case Function::Off:{
-            auto motor_dir = motor_driver_->GetDirection();
-            (motor_dir==Direction::Forward) ?
-                motor_driver_->SetDirection(Direction::Reverse) : motor_driver_->SetDirection(Direction::Forward);
-            DisplayMotorDirection();
-            break;
+            if(sync_button_==Sync::Off){
+                MotorChangeDirection();
+                break;
+            }else{
+                FeederChangeDirection();
+                break;
+            }
         }
         case Function::On:{
-            auto feeder_dir = feeder_driver_->GetDirection();
-            (feeder_dir==Direction::Forward) ?
-                feeder_driver_->SetDirection(Direction::Reverse) : feeder_driver_->SetDirection(Direction::Forward);
-            DisplayFeederDirection();
+            FeederChangeDirection();
             break;
         }
     }
@@ -581,12 +601,39 @@ void WindingMachine::ProcessButtonSix(){
 }
 
 /*SUPPORT METHODS*/
+
+void WindingMachine::UpdateBaseLayerTurns(std::int16_t delta){
+
+    if(motor_driver_->GetDirection()==Direction::Reverse){
+
+        auto abs_delta = (delta > 0) ? delta : -delta;
+        base_layer_turns_scaled_-=abs_delta;
+
+        if(base_layer_turns_scaled_<0){
+            base_layer_turns_scaled_=0;
+        }
+        return;
+    }
+
+    if(feeder_driver_->GetDirection()==Direction::Forward){
+        base_layer_turns_scaled_+=delta;
+    }else{
+        base_layer_turns_scaled_-=delta;
+        if(base_layer_turns_scaled_<0){
+            base_layer_turns_scaled_=0;
+        }
+    }
+}
+
 void WindingMachine::UpdateMotorFlashData(){
 
     encoder_ctrl_->UpdateMotorEncoderData();
     if(!encoder_ctrl_->MotorEncoderHasUpdated()){
         return;
     }
+
+    UpdateBaseLayerTurns(encoder_ctrl_->GetDeltaCounts());
+    display_turn_pos_ = CalcTurnPositionScaled()/encoder_ctrl_->GetScaleFactorTurns();
 
     auto bobbin_rpm = encoder_ctrl_->GetBobbinRPM();
     display_bobbin_rpm_=bobbin_rpm;
@@ -604,7 +651,7 @@ void WindingMachine::UpdateMotorFlashData(){
 
     //for logger
     if(motor_log_cnt_==20){
-        LOG_INFO("turns_pos=%d", GetTurnPosition());
+        LOG_INFO("turns_pos=%d", CalcTurnPositionScaled());
         motor_log_cnt_=0;
     }
     ++motor_log_cnt_;
@@ -620,11 +667,11 @@ void WindingMachine::UpdateFeederFlashData(){
     auto flash_data = (current_feeder_counts<0) ? 0 : current_feeder_counts;
     flash_data_ctrl_->SetFlashFeederCounts(static_cast<uint16_t>(flash_data));
 
-    auto feeder_pos = CalcFeederPosition(current_feeder_counts);
+    auto feeder_pos = CalcFeederPositionScaled(current_feeder_counts);
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/encoder_ctrl_->GetScaleFactorTurns());
 
     if(feeder_log_cnt_==20){
-        LOG_INFO("pos=%d", feeder_pos);
+        LOG_INFO("feeder_pos=%d", feeder_pos);
         feeder_log_cnt_=0;
     }
     ++feeder_log_cnt_;
@@ -656,24 +703,23 @@ void WindingMachine::StopMachine(){
     feeder_driver_->Stop();
 }
 
-std::uint16_t WindingMachine::GetTurnPosition()const{
+std::uint16_t WindingMachine::CalcTurnPositionScaled(){
 
     encoder_ctrl_->UpdateTurnNumber();
-
-    auto current_turns_scaled = encoder_ctrl_->GetTurnNumberScaled();
-    auto wire_diam = flash_data_ctrl_->GetScaledFlashWireDiam();
+    if(!encoder_ctrl_->MotorEncoderHasUpdated()){
+        UpdateBaseLayerTurns(encoder_ctrl_->GetDeltaCounts());
+    }
+    auto wire_diam_scaled = flash_data_ctrl_->GetScaledFlashWireDiam();
     auto scale = flash_data_ctrl_->GetScale();
-    std::uint32_t wire_glob_pos_scaled = wire_diam * current_turns_scaled / scale;
+    auto turn_pos_scaled = static_cast<std::uint32_t>(base_layer_turns_scaled_)*wire_diam_scaled / scale;
 
-    auto pos_in_layer = static_cast<std::uint16_t>(wire_glob_pos_scaled % flash_data_ctrl_->GetMaxFlashFeederPosScaled());
-
-    return pos_in_layer;
+    return static_cast<std::uint16_t>(turn_pos_scaled);
 }
 
-std::uint16_t WindingMachine::CalcFeederPosition(std::int32_t counts){
+std::uint16_t WindingMachine::CalcFeederPositionScaled(std::int32_t counts){
     auto counts_per_revolution = encoder_ctrl_->GetCountsPerRevolution();
-    auto scale_coef = encoder_ctrl_->GetScaleFactorTurns(); //because current_turns_scaled
-    auto feeder_pos = counts*scale_coef/counts_per_revolution; //pitch 1 mm is missed
+    auto scale = encoder_ctrl_->GetScaleFactorTurns(); //because current_turns_scaled
+    auto feeder_pos = counts*scale/counts_per_revolution; //pitch 1 mm is missed
     if(feeder_pos < 0){
         feeder_pos = 0;
     }
@@ -692,8 +738,8 @@ bool WindingMachine::SynchronizeFeeder(){
         return true;
     }
 
-    auto pos_in_layer = GetTurnPosition();
-    auto feeder_pos = CalcFeederPosition(encoder_ctrl_->GetFeederCounts());
+    auto pos_in_layer = CalcTurnPositionScaled();
+    auto feeder_pos = CalcFeederPositionScaled(encoder_ctrl_->GetFeederCounts());
     LOG_INFO("Sync_Start: TurnPos=%d, FeederPos=%d", pos_in_layer, feeder_pos);
 
     std::int32_t error = pos_in_layer - feeder_pos;
@@ -723,7 +769,7 @@ bool WindingMachine::SynchronizeFeeder(){
     std::int32_t error_last = abs_error;
     while(error > max_error){
 
-        feeder_pos = CalcFeederPosition(encoder_ctrl_->GetFeederCounts());
+        feeder_pos = CalcFeederPositionScaled(encoder_ctrl_->GetFeederCounts());
         error = pos_in_layer - feeder_pos;
         error = (error>0) ? error : -error;
 
@@ -768,26 +814,17 @@ void WindingMachine::CorrectFeederPos(){
     }
     last_feeder_pos_correction_time_ = HAL_GetTick();
 
-    auto pos_in_layer = GetTurnPosition();
-    auto max_pos_in_layer = flash_data_ctrl_->GetMaxFlashFeederPosScaled();
+    auto turn_pos = CalcTurnPositionScaled();
+    display_turn_pos_=turn_pos/encoder_ctrl_->GetScaleFactorTurns();
 
-    auto feeder_pos = CalcFeederPosition(encoder_ctrl_->GetFeederCounts());
+    auto feeder_pos = CalcFeederPositionScaled(encoder_ctrl_->GetFeederCounts());
     display_feeder_pos_=static_cast<std::uint8_t>(feeder_pos/encoder_ctrl_->GetScaleFactorTurns());
 
-    if(feeder_pos >= max_pos_in_layer){
-        StopMachine();
-        feeder_driver_->SetDirection(Direction::Reverse);
-        UpdateDisplayAfterStop();
-        LOG_INFO("FEEDER IS IN MAX POSITION");
-        return;
-    }
-
-    std::uint16_t speed=0;
-    if(feeder_driver_->GetDirection()==Direction::Reverse){
-        pos_in_layer=max_pos_in_layer-pos_in_layer;
-        speed = pid_ctrl_->ComputeSpeed(feeder_pos, pos_in_layer,  dt_ms);
+    std::uint16_t speed = 0;
+    if(feeder_driver_->GetDirection()==Direction::Forward){
+        speed = pid_ctrl_->ComputeSpeed(turn_pos, feeder_pos,  dt_ms);
     }else{
-        speed = pid_ctrl_->ComputeSpeed(pos_in_layer, feeder_pos,  dt_ms);
+        speed = pid_ctrl_->ComputeSpeed(feeder_pos, turn_pos,  dt_ms);
     }
 
     auto feeder_pwm = static_cast<std::uint8_t>((speed*feeder_driver_->GetMaxSpeed())/100);
@@ -804,6 +841,10 @@ std::uint8_t WindingMachine::GetDisplaySpeed()const{
 
 std::uint16_t WindingMachine::GetDisplayTurns()const{
     return display_turns_;
+}
+
+std::uint16_t WindingMachine::GetDisplayTurnPos()const{
+    return display_turn_pos_;
 }
 
 std::uint16_t WindingMachine::GetDisplayFeederPos()const{

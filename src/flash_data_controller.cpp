@@ -18,9 +18,9 @@ void FlashDataController::WriteFlashData(){
     std::uint16_t write_data[NB_OF_VAR] = {
         config_->current_turns_scaled_1,
         config_->current_turns_scaled_2,
-        config_->total_turns,        
+        config_->total_turns,
+        config_->base_layer_turns,
         config_->feeder_counts,
-        config_->max_feeder_counts,
         config_->wire_diameter_scaled,
         config_->Kp_scaled,
         config_->Ki_scaled,
@@ -35,25 +35,23 @@ void FlashDataController::WriteFlashData(){
         }
     }
 
-    auto current_turns_scaled_1 = config_->current_turns_scaled_1;
-    auto current_turns_scaled_2 = config_->current_turns_scaled_2;
     LOG_INFO("WriteFlashData:\
             current_turns_scaled_1=%d\
             current_turns_scaled_2=%d\
             current_turns=%d",
-            current_turns_scaled_1,
-            current_turns_scaled_2,
-            current_turns_scaled_1 + current_turns_scaled_2);
+            config_->current_turns_scaled_1,
+            config_->current_turns_scaled_2,
+            GetFlashCurrentTurnsScaled());
 
     LOG_INFO("WriteFlashData:\
+            base_layer_turns=%d,\
             feeder_counts=%d,\
-            max_feeder_counts=%d,\
             wire_diameter_scaled=%d,\
             Kp_scaled=%d,\
             Ki_scaled=%d,\
             Kd_scaled=%d",
+            config_->base_layer_turns,
             config_->feeder_counts,
-            config_->max_feeder_counts,
             config_->wire_diameter_scaled,
             config_->Kp_scaled,
             config_->Ki_scaled,
@@ -80,10 +78,10 @@ void FlashDataController::ProcessUartCommand(const UartCommand cmd){
     }
 
     switch(cmd_index){
-        case 1: /*if(value <= config_->total_turns) config_->current_turns = value;*/ break;
+        case 1: /*free*/break;
         case 2: if(value <= 2000)   config_->total_turns = value; break;
-        case 3: /*if(value <= 6000) config_->feeder_counts = value;*/ break;
-        case 4: if(value <= 4800)   config_->max_feeder_counts = value; break;
+        case 3: /*free*/break;
+        case 4: /*free*/break;
         case 5: if (value <= 200)   config_->wire_diameter_scaled = value; break;
         case 6: if (value <= 100)   {config_->Kp_scaled = value; SetPidCoefUpdFlag();} break;
         case 7: if (value <= 80)    {config_->Ki_scaled = value; SetPidCoefUpdFlag();} break;
@@ -111,8 +109,8 @@ void FlashDataController::SetFlashFeederCounts(const std::uint16_t feeder_counts
     config_->feeder_counts=feeder_counts;
 }
 
-void FlashDataController::SetMaxFlashFeederCounts(const std::uint16_t feeder_counts){
-    config_->max_feeder_counts = feeder_counts;
+void FlashDataController::SetFlashBaseLayerTurnsScaled(std::uint16_t base_layer_turns){
+    config_->base_layer_turns = base_layer_turns;
 }
 
 void FlashDataController::SetKpScaled(const std::uint8_t Kp){
@@ -151,12 +149,8 @@ std::uint16_t FlashDataController::GetFlashFeederCounts() const{
     return config_->feeder_counts;
 }
 
-std::uint16_t FlashDataController::GetMaxFlashFeederCounts()const{
-    return config_->max_feeder_counts;
-}
-
-std::uint16_t FlashDataController::GetMaxFlashFeederPosScaled(){
-    return (config_->max_feeder_counts*SCALE/32);
+std::uint16_t FlashDataController::GetFlashBaseLayerTurnsScaled()const{
+    return config_->base_layer_turns;
 }
 
 std::uint8_t  FlashDataController::GetKpScaled()const{

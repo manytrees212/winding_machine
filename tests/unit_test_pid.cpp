@@ -124,4 +124,25 @@ TEST(PidTest, CheckResetMethod){
     EXPECT_EQ(pid.GetPrevInput(),0);
 }
 
+TEST(PidTest, CheckInvertInput){
+
+    PID pid{80, 5, 5, 0, 100};
+
+    auto speed = pid.ComputeSpeed(90, 100, 50);
+    std::cout<<"P="<<(pid.GetMonitorData()).p<<'\n';
+    std::cout<<"I="<<(pid.GetMonitorData()).i<<'\n';
+    std::cout<<"D="<<(pid.GetMonitorData()).d<<'\n';
+    std::cout<<"PID="<<(pid.GetMonitorData()).out<<'\n';
+
+    EXPECT_EQ(speed, 0);
+
+    pid.ComputeSpeed(80, 100, 50);
+    std::cout<<"P="<<(pid.GetMonitorData()).p<<'\n';
+    std::cout<<"I="<<(pid.GetMonitorData()).i<<'\n';
+    std::cout<<"D="<<(pid.GetMonitorData()).d<<'\n';
+    std::cout<<"PID="<<(pid.GetMonitorData()).out<<'\n';
+
+    EXPECT_EQ(speed, 0);
+}
+
 

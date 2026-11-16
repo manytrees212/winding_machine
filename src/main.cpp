@@ -26,8 +26,8 @@ extern "C" const uint16_t VirtAddVarTab[NB_OF_VAR] = {/*defenition for eeprom*/
     VAR_CURRENT_TURNS_1,
     VAR_CURRENT_TURNS_2,
     VAR_TOTAL_TURNS,
+    VAR_BASE_LAYER_TURNS,
     VAR_FEEDER_COUNTS,
-    VAR_MAX_FEEDER_COUNTS,
     VAR_WIRE_DIAMETER_SCALED,
     VAR_KP_SCALED,
     VAR_KI_SCALED,
@@ -63,12 +63,12 @@ int main(){
     LOG_INFO("1.Configuration EEPROM:\
                 current_turns_scaled=%d,\
                 total_turns=%d,\
-                feeder_counts=%d,\
-                max_feeder_counts=%d",
+                base_layer_turns=%d,\
+                feeder_counts=%d",
                 flash_data_controller.GetFlashCurrentTurnsScaled(),
                 flash_data_controller.GetFlashTotalTurns(),
-                flash_data_controller.GetFlashFeederCounts(),
-                flash_data_controller.GetMaxFlashFeederCounts()
+                flash_data_controller.GetFlashBaseLayerTurnsScaled(),
+                flash_data_controller.GetFlashFeederCounts()
              );
 
     ST7789_HW_Interface hw = {/*functions for display init*/
@@ -130,7 +130,8 @@ int main(){
     auto last_bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
     auto last_speed = winding_machine.GetDisplaySpeed();
     auto last_turn = winding_machine.GetDisplayTurns();
-    auto last_feeder_pos = winding_machine.CalcFeederPosition(encoder_ctrl.GetFeederCounts());
+    auto last_feeder_pos = winding_machine.CalcFeederPositionScaled(encoder_ctrl.GetFeederCounts());
+    auto last_turn_pos = winding_machine.GetDisplayTurnPos();
 
     std::uint32_t last_ms = HAL_GetTick();
 
@@ -152,12 +153,10 @@ int main(){
 
             auto current_feeder_counts=encoder_ctrl.GetFeederCounts();
             LOG_INFO("FEEDER is HOME:\
-                     encoder_counts=%d\
-                     flash_counts_data=%d\
+                     turn_pos=%d\
                      feeder_pos=%d",
-                     current_feeder_counts,
-                     flash_data_controller.GetFlashFeederCounts(),
-                     winding_machine.CalcFeederPosition(current_feeder_counts));
+                     winding_machine.CalcTurnPositionScaled(),
+                     winding_machine.CalcFeederPositionScaled(current_feeder_counts));
 
             feeder.SetDirection(Direction::Forward);
             winding_machine.DisplayFeederDirection();
@@ -177,16 +176,11 @@ int main(){
             continue;
         }
 
+        winding_machine.UpdateMotorFlashData();
+        winding_machine.UpdateFeederFlashData();
+
         auto is_motor = motor.GetState()==MotorState::Running;
         auto is_feeder = feeder.GetState()==MotorState::Running;
-
-        if(is_motor){
-            winding_machine.UpdateMotorFlashData();
-        }
-
-        if(is_feeder){
-            winding_machine.UpdateFeederFlashData();
-        }
 
         if(is_motor && is_feeder){
             winding_machine.CorrectFeederPos();
@@ -215,10 +209,13 @@ int main(){
 
         auto now_ms=HAL_GetTick();
         if((now_ms-last_ms) > 1000){/*update display 1000 ms*/
+
             auto bobbin_rpm = winding_machine.GetDisplayBobbinRPM();
             auto turns = winding_machine.GetDisplayTurns();
+            auto turn_pos = winding_machine.GetDisplayTurnPos();
             auto speed = winding_machine.GetDisplaySpeed();
             auto feeder_pos = winding_machine.GetDisplayFeederPos();
+
             if(last_bobbin_rpm != bobbin_rpm){
                 winding_machine.DisplayBobbinRPM();
                 last_bobbin_rpm=bobbin_rpm;
@@ -226,6 +223,10 @@ int main(){
             if(turns != last_turn){
                 winding_machine.DisplayCurrentTurns();
                 last_turn=turns;
+            }
+            if(turn_pos != last_turn_pos){
+                winding_machine.DisplayTurnPos();
+                last_turn_pos=turn_pos;
             }
             if(speed != last_speed){
                 winding_machine.DisplayCurrentSpeed();
