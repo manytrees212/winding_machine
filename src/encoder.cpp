@@ -67,6 +67,10 @@ std::uint32_t EncoderController::GetLastTurnNumberScaled()const{
     return last_turn_number_scaled_;
 }
 
+std::uint16_t EncoderController::GetDeltaCounts()const{
+    return motor_counts_delta_;
+}
+
 std::uint16_t EncoderController::GetBobbinRPM()const{
     return bobbin_rpm_scaled_/SCALE_FACTOR_RMP;
 }
@@ -111,13 +115,13 @@ void EncoderController::UpdateTurnNumber(){
     auto motor_current_counts = motor_encoder_.GetCounts();
     motor_encoder_.SetCounter(CNT_MIDDLE);
 
-    motor_counts_per_update_ = static_cast<std::uint16_t>(motor_current_counts - CNT_MIDDLE);
-    if(motor_counts_per_update_==0){
+    motor_counts_delta_ = static_cast<std::int16_t>(motor_current_counts - CNT_MIDDLE);
+    if(motor_counts_delta_==0){
         motor_encoder_has_updated_=false;
         return;
     }
 
-    auto turns_number_raw_scaled = static_cast<std::int32_t>((motor_counts_per_update_ * SCALE_FACTOR_TURNS) / REAL_COUNTS_PER_REV); // motor output
+    auto turns_number_raw_scaled = static_cast<std::int32_t>((motor_counts_delta_ * SCALE_FACTOR_TURNS) / REAL_COUNTS_PER_REV); // motor output
     last_turn_number_scaled_=turn_number_scaled_;
     turn_number_scaled_+=(turns_number_raw_scaled*GEAR_RATIO_SCALED/SCALE_FACTOR_RATIO); //bobbin turns
     if(turn_number_scaled_<0){
@@ -135,7 +139,7 @@ void EncoderController::ReadMotorEncoderData(){
         return;
     }
     // calc bobbin RMP:
-    std::int32_t rpm_scaled_raw = (motor_counts_per_update_ * UPDATE_INTERVAL_MIN * SCALE_FACTOR_RMP) / REAL_COUNTS_PER_REV;
+    std::int32_t rpm_scaled_raw = (motor_counts_delta_ * UPDATE_INTERVAL_MIN * SCALE_FACTOR_RMP) / REAL_COUNTS_PER_REV;
     if (rpm_scaled_raw < 0){
         rpm_scaled_raw = -rpm_scaled_raw;
     }
@@ -164,9 +168,8 @@ void EncoderController::UpdateFeederEncoderData(){
     last_feeder_update_time_ = current_time;
 
     auto feeder_counts = static_cast<std::uint16_t>(GetFeederCounts());
-    if(feeder_counts!=last_update_feeder_counts_){
+    if(feeder_counts!=last_feeder_counts_){
         feeder_encoder_has_updated_=true;
-        last_update_feeder_counts_=feeder_counts;
     }else{
         feeder_encoder_has_updated_=false;
     }

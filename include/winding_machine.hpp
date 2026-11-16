@@ -48,8 +48,8 @@ public:
     void SetHomeFlag();
     bool GetHomeFlag()const;
 
-    std::uint16_t CalcFeederPosition(std::int32_t counts);
-    std::uint16_t GetTurnPosition()const;
+    std::uint16_t CalcFeederPositionScaled(std::int32_t counts);
+    std::uint16_t CalcTurnPositionScaled();
 
     void StopMachine();
     void UpdateDisplayAfterStop();
@@ -66,7 +66,7 @@ public:
     void DisplayBobbinRPM()const;
     void DisplaySyncState()const;
     void DisplayFeederPosition()const;
-    void DisplayMaxFeederPos()const;
+    void DisplayTurnPos()const;
     void DisplayKp()const;
     void DisplayKi()const;
     void DisplayKd()const;
@@ -74,6 +74,7 @@ public:
     std::uint8_t GetDisplayBobbinRPM()const;
     std::uint8_t GetDisplaySpeed()const;
     std::uint16_t GetDisplayTurns()const;
+    std::uint16_t GetDisplayTurnPos()const;
     std::uint16_t GetDisplayFeederPos()const;
 
 private:
@@ -104,6 +105,11 @@ private:
     void SpeedUp();
     void SpeedDown();
 
+    void MotorChangeDirection();
+    void FeederChangeDirection();
+
+    void UpdateBaseLayerTurns(const std::int16_t delta);
+
 private:
     static constexpr std::uint8_t MOTOR_SPEED_STEP{10};
     static constexpr std::uint8_t FEEDER_POS_UPDATE_INTERVAL_MS{10};
@@ -119,19 +125,22 @@ private:
     Function func_button_ = Function::Off;
     Sync sync_button_ = Sync::Off;
 
+    bool true_feeder_pos_flag_{true};
+    bool home_pos_flag_{false};
+    bool sync_flag_{false};
+    bool display_update_flag_{false};
+
     std::uint32_t last_feeder_pos_correction_time_{0};
+    std::int16_t base_layer_turns_scaled_{0};
 
     std::uint16_t display_turns_{0};
+    std::uint16_t display_turn_pos_{0};
     std::uint8_t display_bobbin_rpm_{0};
     std::uint8_t display_speed_{0};
     std::uint8_t display_feeder_pos_{0};
 
     std::uint8_t motor_log_cnt_{0};
     std::uint8_t feeder_log_cnt_{0};
-    bool true_feeder_pos_flag_{true};
-    bool home_pos_flag_{false};
-    bool sync_flag_{false};
-    bool display_update_flag_{false};
 };
 
 #endif //WINDING_MACHINE_HPP
