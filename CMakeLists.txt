@@ -1,11 +1,37 @@
 cmake_minimum_required(VERSION 3.20)
 project(winding_machine C CXX ASM)
 
-option(BUILD_WM_PROJECT OFF)
-option(BUILD_U_TESTS OFF)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(BUILD_WM_PROJECT "Build stm32 winding machine firmware with HAL" ON)
+option(BUILD_U_TESTS "Build unit-tests on the host" OFF)
+
+# Build Way Logic
+if(NOT BUILD_WM_PROJECT AND NOT BUILD_U_TESTS)
+    set(BUILD_U_TESTS ON CACHE BOOL "Build unit tests")
+endif()
 
 if(BUILD_WM_PROJECT AND BUILD_U_TESTS)
     message(FATAL_ERROR "Cannot enable both BUILD_WM_PROJECT and BUILD_U_TESTS at the same time.")
+endif()
+
+# Build Type Logic
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose build type")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(USE_FULL_ASSERT)
+    message(STATUS ">> Debug Build: USE_FULL_ASSERT is ENABLED")
+else()
+    add_compile_definitions(NDEBUG)
+    message(STATUS ">> Release Build: USE_FULL_ASSERT is DISABLED")
 endif()
 
 set(PROJECT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -53,8 +79,9 @@ if(BUILD_WM_PROJECT)
     )
 
     target_compile_definitions(HAL_Driver INTERFACE
-        USE_HAL_DRIVER
         STM32F103xB
+        $<$<CONFIG:Debug>:USE_FULL_ASSERT>
+        $<$<CONFIG:Release>:NDEBUG>
     )
 
     add_library(stm32_hardware_flags INTERFACE)
@@ -132,37 +159,22 @@ if(BUILD_WM_PROJECT)
         ${CMSIS_DEVICE_PATH}/Source/Templates/gcc/startup_stm32f103xb.s
     )
 
-    # HAL source files needed for current task
-    if(USE_HAL_DRIVER)
-        list(APPEND SOURCES
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_pwr.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_flash.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_flash_ex.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_gpio.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_rcc.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_cortex.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_uart.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_dma.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_spi.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_tim.c
-            ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_tim_ex.c
-        )
-        # Build Type Logic
-        if(NOT CMAKE_BUILD_TYPE)
-            set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose build type" FORCE)
-        endif()
-
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            add_compile_definitions(USE_HAL_DRIVER USE_FULL_ASSERT)
-            message(STATUS ">> Debug Build: USE_FULL_ASSERT is ENABLED")
-        else()
-            add_compile_definitions(USE_HAL_DRIVER)
-            message(STATUS ">> Release Build: USE_FULL_ASSERT is DISABLED")
-        endif()
-
-        message(STATUS "HAL sources added")
-    endif()
+    # HAL source files
+    list(APPEND SOURCES
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_pwr.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_flash.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_flash_ex.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_gpio.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_rcc.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_cortex.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_uart.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_dma.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_spi.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_tim.c
+        ${HAL_DRIVER_PATH}/Src/stm32f1xx_hal_tim_ex.c
+    )
+    message(STATUS "HAL sources added")
 
     # ============================================
     # 3. CREATE EXECUTABLE & INCLUDES
@@ -174,6 +186,7 @@ if(BUILD_WM_PROJECT)
     )
 
     target_link_libraries(${PROJECT_NAME}.elf PRIVATE
+        HAL_Driver
         logger
         error_handler
         stm32_st7789 #spi tft_display
@@ -185,14 +198,6 @@ if(BUILD_WM_PROJECT)
     # ============================================
     # 4. COMPILER OPTIONS
     # ============================================
-
-    set_target_properties(${PROJECT_NAME}.elf PROPERTIES
-        C_STANDARD 11
-        C_STANDARD_REQUIRED ON
-        CXX_STANDARD 20
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-    )
 
     target_compile_options(${PROJECT_NAME}.elf PRIVATE
         $<$<COMPILE_LANG_AND_ID:C,GNU>:-mcpu=cortex-m3>
@@ -207,10 +212,12 @@ if(BUILD_WM_PROJECT)
         $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
         $<$<COMPILE_LANGUAGE:CXX>:-fno-unwind-tables>
-        -Og
+
+        $<$<CONFIG:Debug>:-Og -g3>
+        $<$<CONFIG:Release>:-Os>
+
         -Wshadow
         -Wdouble-promotion
-        -g
     )
 
     # ============================================
@@ -282,54 +289,42 @@ if(BUILD_WM_PROJECT)
     if(NOT STM32FLASH)
         message(WARNING "stm32flash not found. UART bootloader flash targets disabled.")
     else()
-        if(NOT SERIAL_PORT) # if there is no -DSERIAL_PORT=/dev/ttyUSB0
-            if(EXISTS "/dev/ttyUSB0")
-                set(SERIAL_PORT "/dev/ttyUSB0" CACHE STRING "Serial port for UART flashing")
-            elseif(EXISTS "/dev/ttyACM0")
-                set(SERIAL_PORT "/dev/ttyACM0" CACHE STRING "Serial port for UART flashing")
-            else()
-                message(WARNING "Override with: cmake -DSERIAL_PORT=/dev/ttyUSB0 ..")
-            endif()
+        set(SERIAL_PORT "" CACHE STRING "Optional fixed serial port override")
+        if(SERIAL_PORT)
+            set(DETECT_PORT_CMD "PORT=\"${SERIAL_PORT}\"")
+        else()
+            set(DETECT_PORT_CMD
+                "PORT=\${SERIAL_PORT:-$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null | head -n 1)}; if [ -z \"$PORT\" ];then echo \"Error: No USB/ACM serial port found. Connect adapter or pass SERIAL_PORT=/dev/ttyUSBx\" >&2; exit 1;fi")
         endif()
 
         # Basic UART flash (default baud rate 57600)
         add_custom_target(flash_uart
-            COMMAND ${STM32FLASH} -w ${PROJECT_NAME}.bin -v -g 0x8000000 ${SERIAL_PORT}
+            COMMAND sh -c "${DETECT_PORT_CMD}; echo \"Flashing via $PORT...\"; ${STM32FLASH} -w ${PROJECT_NAME}.bin -v -g 0x8000000 \"$PORT\""
             DEPENDS ${PROJECT_NAME}.elf
             COMMENT "Flashing via internal bootloader over UART (${SERIAL_PORT})..."
-        )
-
-        # Fast UART flash (higher baud rate - up to 230400 works on Blue Pill)
-        add_custom_target(flash_uart_fast
-            COMMAND ${STM32FLASH} -b 115200 -w ${PROJECT_NAME}.bin -v -g 0x8000000 ${SERIAL_PORT}
-            DEPENDS ${PROJECT_NAME}.elf
-            COMMENT "Flashing via internal bootloader @ 115200 baud on ${SERIAL_PORT}..."
-        )
-
-        # Very fast UART flash (maximum supported baud rate)
-        add_custom_target(flash_uart_ultra
-            COMMAND ${STM32FLASH} -b 230400 -w ${PROJECT_NAME}.bin -v -g 0x8000000 ${SERIAL_PORT}
-            DEPENDS ${PROJECT_NAME}.elf
-            COMMENT "Flashing via internal bootloader @ 230400 baud on ${SERIAL_PORT}..."
+            VERBATIM
         )
 
         # Erase via UART bootloader
         add_custom_target(erase_uart
-            COMMAND ${STM32FLASH} -e ${SERIAL_PORT}
+            COMMAND sh -c "${DETECT_PORT_CMD}; echo \"Erasing flash via $PORT...\"; ${STM32FLASH} -e \"$PORT\""
             DEPENDS ${PROJECT_NAME}.elf
             COMMENT "Erasing flash via internal bootloader on ${SERIAL_PORT}..."
+            VERBATIM
         )
 
         # Read back flash via UART (save to file)
         add_custom_target(read_flash_uart
-            COMMAND ${STM32FLASH} -r backup_${PROJECT_NAME}.bin -S 0x8000000:0x8002000 ${SERIAL_PORT}
+            COMMAND sh -c "${DETECT_PORT_CMD}; echo \"Reading flash via $PORT...\"; ${STM32FLASH} -r backup_${PROJECT_NAME}.bin -S 0x8000000:0x8002000 \"$PORT\""
             COMMENT "Reading flash (first 8KB) via internal bootloader..."
+            VERBATIM
         )
 
         # Interactive UART terminal (for debugging bootloader communication)
         add_custom_target(uart_terminal
-            COMMAND ${STM32FLASH} -i ${SERIAL_PORT}
+            COMMAND sh -c "${DETECT_PORT_CMD}; echo \"Opening terminal on $PORT...\"; ${STM32FLASH} -i \"$PORT\""
             COMMENT "Interactive UART terminal on ${SERIAL_PORT} (Ctrl+C to exit)..."
+            VERBATIM
         )
     endif()
 
