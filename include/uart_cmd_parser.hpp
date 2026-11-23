@@ -4,15 +4,20 @@
 #include <cstdint>
 #include "project_config.hpp"
 
-class UartCmdParser{
+class UartCmdParser final{
 public:
     UartCmdParser()=default;
     ~UartCmdParser()=default;
 
+    UartCmdParser(const UartCmdParser&) = delete;
+    UartCmdParser& operator=(const UartCmdParser&) = delete;
+    UartCmdParser(UartCmdParser&&) = delete;
+    UartCmdParser& operator=(UartCmdParser&&) = delete;
+
     void ParseUartBuffer();
     bool IsCmdReady()const;
 
-    const UartCommand GetUartCmd();
+    UartCommand GetUartCmd();
 
 private:
     void UpdateCmd();

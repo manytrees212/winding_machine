@@ -14,10 +14,10 @@ template <typename T, typename = void>
 struct has_enable_pins : std::false_type {};
 
 template <typename T>
-struct has_enable_pins<T, std::void_t<decltype(T::ENABLE_PORT)>> : std::true_type {};
+struct has_enable_pins<T, std::void_t<decltype(T::ENABLE_PORT_L)>> : std::true_type {};
 
 template <typename Config>
-class MotorDriver{
+class MotorDriver final{
 public:
     MotorDriver(){
         if constexpr (Config::IS_COMPLEMENTARY) {
@@ -27,9 +27,26 @@ public:
             HAL_TIM_PWM_Start(Config::TIMER, Config::TIMER_CHANNEL_FWD);
             HAL_TIM_PWM_Start(Config::TIMER, Config::TIMER_CHANNEL_REV);
         }
-        ApplyPWM(0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
+        EnableMotor(false);
+        static_assert(Config::MAX_SPEED > 0, "MAX_SPEED must be greater than 0");
     }
-    ~MotorDriver()=default;
+    ~MotorDriver(){
+        Stop();
+        if constexpr (Config::IS_COMPLEMENTARY) {
+            HAL_TIMEx_PWMN_Stop(Config::TIMER, Config::TIMER_CHANNEL_FWD);
+            HAL_TIMEx_PWMN_Stop(Config::TIMER, Config::TIMER_CHANNEL_REV);
+        } else {
+            HAL_TIM_PWM_Stop(Config::TIMER, Config::TIMER_CHANNEL_FWD);
+            HAL_TIM_PWM_Stop(Config::TIMER, Config::TIMER_CHANNEL_REV);
+        }
+    }
+
+    MotorDriver(const MotorDriver&) = delete;
+    MotorDriver& operator=(const MotorDriver&) = delete;
+    MotorDriver(MotorDriver&&) = delete;
+    MotorDriver& operator=(MotorDriver&&) = delete;
 
     void Start(){
         if(state_==MotorState::Running) {return;}
@@ -74,14 +91,12 @@ private:
     void EnableMotor(bool enable) {
         if constexpr (HasEnablePins()) {
             GPIO_PinState state = enable ? GPIO_PIN_SET : GPIO_PIN_RESET;
-            HAL_GPIO_WritePin(Config::ENABLE_PORT, Config::L_PIN, state);
-            HAL_GPIO_WritePin(Config::ENABLE_PORT, Config::R_PIN, state);
+            HAL_GPIO_WritePin(Config::ENABLE_PORT_L, Config::L_PIN, state);
+            HAL_GPIO_WritePin(Config::ENABLE_PORT_R, Config::R_PIN, state);
         }
     }
 
     void ApplyPWM(uint8_t speed){
-
-        static_assert(Config::MAX_SPEED > 0, "MAX_SPEED must be greater than 0");
 
         std::uint32_t compare=0;
         if (speed > 0) {
@@ -90,9 +105,12 @@ private:
             } else if constexpr (Config::TIMER_PERIOD == 2047) {
                 compare = static_cast<uint32_t>(speed) << 3; // Fast multiply by 8
             } else {
-                compare = (static_cast<uint32_t>(speed) * Config::TIMER->Init.Period) / MotorConfig::MAX_SPEED;
+                compare = (static_cast<uint32_t>(speed) * Config::TIMER->Init.Period) / Config::MAX_SPEED;
             }
         }
+
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
+        __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
 
         if(compare>0){
             switch(direction_){
@@ -106,9 +124,6 @@ private:
                 break;
             default: break;
             }
-        }else{
-            __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_FWD, 0);
-            __HAL_TIM_SET_COMPARE(Config::TIMER, Config::TIMER_CHANNEL_REV, 0);
         }
     }
 
